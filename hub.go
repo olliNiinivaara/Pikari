@@ -28,15 +28,9 @@ func addUser(u *user) {
 	mutex.Lock()
 	if _, ok := users[u.id]; ok {
 		removeUser(u, false)
-		if dev {
-			fmt.Println("Signed-in user kicked out: " + u.id)
-		}
 	}
 	users[u.id] = u
-	if dev {
-		fmt.Println("User signed in: " + u.id)
-		fmt.Println("Users on-line: " + strconv.Itoa(len(users)))
-	}
+	fmt.Println("\rusers: " + strconv.Itoa(len(users)))
 	mutex.Unlock()
 }
 
@@ -46,11 +40,7 @@ func removeUser(u *user, lock bool) {
 		defer mutex.Unlock()
 	}
 	delete(users, u.id)
-	u.conn.Close()
-	if dev {
-		fmt.Println("User signed out: " + u.id)
-		fmt.Println("Users on-line: " + strconv.Itoa(len(users)))
-	}
+	fmt.Println("\rusers: " + strconv.Itoa(len(users)))
 }
 
 func respond(receivers *[]string, message *[]byte) {

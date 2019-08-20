@@ -46,15 +46,12 @@ func initAssets() {
 		}
 	}
 
-	if dev {
-		if _, err := os.Stat(exePath + "/pikari.js"); os.IsNotExist(err) {
-			createFile("pikari.js", pikari, exePath)
-		} else {
-			p, _ := ioutil.ReadFile("pikari.js")
-			pikari = string(p)
-		}
+	if _, err := os.Stat(exePath + "/pikari.js"); os.IsNotExist(err) {
+		createFile("pikari.js", pikari, exePath)
+	} else {
+		p, _ := ioutil.ReadFile("pikari.js")
+		pikari = string(p)
 	}
-
 }
 
 const helloindex = `

@@ -14,7 +14,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var port, addr, path, exePath, application, dev = 0, "", "", "", "", false
+var port, addr, path, exePath, application = 0, "", "", "", ""
 
 var upgrader = websocket.Upgrader{}
 
@@ -46,7 +46,8 @@ func handleMessage(message *wsdata) {
 func ws(w http.ResponseWriter, r *http.Request) {
 	userid := r.URL.Query().Get("user")
 	if userid == "" {
-		log.Fatal("Pikari server error - user name missing in web socket handshake")
+		log.Println("Pikari server error - user name missing in web socket handshake")
+		return
 	}
 
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -87,35 +88,26 @@ func main() {
 	addr = "127.0.0.1:" + strconv.Itoa(port)
 	flag.StringVar(&application, "app", "HelloWorld", "subdirectory of the application")
 	_, callerFile, _, _ := runtime.Caller(0)
-	flag.BoolVar(&dev, "dev", false, "set internal development mode")
 	flag.Parse()
 	exePath = filepath.Dir(callerFile)
 	path = exePath + string(filepath.Separator) + application + string(filepath.Separator)
 	logfile, err := os.OpenFile(path+"Pikari.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		os.Exit(1)
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
 	fmt.Println("Pikari 0.1 starting from " + path)
-	if dev {
-		fmt.Println("Development mode set!")
-	}
 	initAssets()
 	fs := http.FileServer(http.Dir(path))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
 	http.HandleFunc("/ws", ws)
-	if dev {
-		rootfs := http.FileServer(http.Dir(exePath))
-		http.Handle("/pikari.js", rootfs)
-	} else {
-		http.HandleFunc("/pikari.js", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/javascript")
-			fmt.Fprintf(w, pikari)
-		})
-	}
+	rootfs := http.FileServer(http.Dir(exePath))
+	http.Handle("/pikari.js", rootfs)
 	fmt.Println("Serving " + application + " to " + addr)
+	fmt.Println("users: 0")
 	log.Println("---")
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
