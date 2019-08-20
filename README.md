@@ -6,4 +6,4 @@ The rapidest web application prototyping framework
 - Javascript only - no need to learn other languages
 - Minimal and easy-to-use Js API - get productive in minutes
 - Framework agnostic - use your favorite tools from vanillaJs to Angular
-- lots of pragmatic examples available soon
+- Lots of pragmatic examples available soon
