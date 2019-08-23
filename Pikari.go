@@ -10,11 +10,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
-var port, addr, path, exePath, application = 0, "", "", "", ""
+var mutex sync.Mutex
+
+var appdir, exedir, port = "", "", 0
 
 var upgrader = websocket.Upgrader{}
 
@@ -24,23 +27,10 @@ func favicon(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=\n\n")
 }
 
-func handleMessage(message *wsdata) {
-	type messagedata struct {
-		Receivers []string `json:"receivers"`
-		Message   string   `json:"message"`
-	}
-	m := messagedata{}
-	err := json.Unmarshal([]byte(message.Message), &m)
-	if err != nil {
-		log.Println("Pikari server error - message parsing error: " + err.Error())
-		return
-	}
-	response := &wsdata{User: message.User, Messagetype: message.Messagetype, Message: message.Message}
-	jsonresponse, err := json.Marshal(response)
-	if err != nil {
-		log.Println("Pikari server error - message parsing error : " + err.Error())
-	}
-	respond(&m.Receivers, &jsonresponse)
+func pikarijs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/javascript")
+	w.Header().Set("Cache-Control", "public, max-age=7776000")
+	fmt.Fprint(w, pikari)
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
@@ -85,29 +75,48 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.IntVar(&port, "port", 8080, "http service port")
-	addr = "127.0.0.1:" + strconv.Itoa(port)
-	flag.StringVar(&application, "app", "HelloWorld", "subdirectory of the application")
+	addr := "127.0.0.1:" + strconv.Itoa(port)
 	_, callerFile, _, _ := runtime.Caller(0)
+	exedir = filepath.Dir(callerFile)
+	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
 	flag.Parse()
-	exePath = filepath.Dir(callerFile)
-	path = exePath + string(filepath.Separator) + application + string(filepath.Separator)
-	logfile, err := os.OpenFile(path+"Pikari.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if len(appdir) == 0 {
+		fmt.Println("Give path to application with appdir parameter, like this: pikari -appdir:myapplication")
+		os.Exit(1)
+	}
+	if !filepath.IsAbs(appdir) {
+		appdir = exedir + string(filepath.Separator) + appdir + string(filepath.Separator)
+	}
+	_, err := os.Stat(appdir)
+	if os.IsNotExist(err) {
+		fmt.Println("Application directory not found: " + appdir)
+		os.Exit(1)
+	}
+	logfile, err := os.OpenFile(appdir+"pikari.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println("Pikari 0.1 starting from " + path)
-	initAssets()
-	fs := http.FileServer(http.Dir(path))
+	fmt.Println("Pikari 0.1 starting")
+	//initAssets()
+	fs := http.FileServer(http.Dir(appdir))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
 	http.HandleFunc("/ws", ws)
-	rootfs := http.FileServer(http.Dir(exePath))
-	http.Handle("/pikari.js", rootfs)
-	fmt.Println("Serving " + application + " to " + addr)
+	_, err = os.Stat("pikari.js")
+	if os.IsNotExist(err) {
+		http.HandleFunc("/pikari.js", pikarijs)
+	} else {
+		rootfs := http.FileServer(http.Dir(exedir))
+		http.Handle("/pikari.js", rootfs)
+	}
+	http.HandleFunc("/starttransaction", startTransaction)
+	fmt.Println("Serving " + appdir + " to " + addr)
 	fmt.Println("users: 0")
 	log.Println("---")
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
+
+const pikari = ``

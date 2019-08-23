@@ -1,9 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
-	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -22,7 +23,24 @@ type user struct {
 
 var users = make(map[string]*user)
 
-var mutex sync.Mutex
+func handleMessage(message *wsdata) {
+	type messagedata struct {
+		Receivers []string `json:"receivers"`
+		Message   string   `json:"message"`
+	}
+	m := messagedata{}
+	err := json.Unmarshal([]byte(message.Message), &m)
+	if err != nil {
+		log.Println("Pikari server error - message parsing error: " + err.Error())
+		return
+	}
+	response := &wsdata{User: message.User, Messagetype: message.Messagetype, Message: message.Message}
+	jsonresponse, err := json.Marshal(response)
+	if err != nil {
+		log.Println("Pikari server error - message parsing error : " + err.Error())
+	}
+	respond(&m.Receivers, &jsonresponse)
+}
 
 func addUser(u *user) {
 	mutex.Lock()
