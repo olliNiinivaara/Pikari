@@ -11,13 +11,24 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
 
+const tf = "01-02 15:04"
+
 var mutex sync.Mutex
 
-var appdir, exedir, port = "", "", 0
+var appdir, exedir, port, password = "", "", 0, ""
+
+type wsdata struct {
+	Sender      string   `json:"sender"`
+	Password    string   `json:"password,omitempty"`
+	Receivers   []string `json:"receivers,omitempty"`
+	Messagetype string   `json:"messagetype"`
+	Message     string   `json:"message"`
+}
 
 var upgrader = websocket.Upgrader{}
 
@@ -62,13 +73,30 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("Pikari server error - ws parsing error: " + err.Error())
 			break
 		}
+		if !checkUser(&theuser, data.Password) {
+			break
+		}
 		switch data.Messagetype {
 		case "log":
-			log.Println(data.Message)
+			log.Println(&data.Message)
+		case "start":
+			//changemessage := changestruct{"start", make(map[string]json.RawMessage)}
+			changemessage := changestruct{"start", make(map[string]string)}
+			//changemessage.Fields["jokukenttä"] = json.RawMessage(`{"arvo1": "joppis"}`)
+			changemessage.Fields["jokukenttä"] = `{"arvo1": "joppis"}`
+			jsonresponse, err := json.Marshal(changemessage)
+			if err != nil {
+				log.Fatal("Pikari server error - data parsing error at start: " + err.Error())
+			}
+			transmitMessage(&wsdata{"server", "", []string{theuser.id}, "change", string(jsonresponse)}, true)
 		case "message":
-			handleMessage(&data)
+			transmitMessage(&data, true)
+		case "commit":
+			commit(&theuser, &data.Message)
+		case "rollback":
+			rollback(&theuser, true)
 		default:
-			log.Println("Pikari server error - web socket read message type unknown: " + data.Messagetype)
+			log.Println("Pikari server error - web socket message type unknown: " + data.Messagetype)
 		}
 	}
 }
@@ -79,6 +107,7 @@ func main() {
 	_, callerFile, _, _ := runtime.Caller(0)
 	exedir = filepath.Dir(callerFile)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
+	flag.StringVar(&password, "password", "", "password for the application")
 	flag.Parse()
 	if len(appdir) == 0 {
 		fmt.Println("Give path to application with appdir parameter, like this: pikari -appdir:myapplication")
@@ -99,8 +128,7 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println("Pikari 0.1 starting")
-	//initAssets()
+	fmt.Println("Pikari 0.2 starting")
 	fs := http.FileServer(http.Dir(appdir))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
@@ -114,7 +142,7 @@ func main() {
 	}
 	http.HandleFunc("/starttransaction", startTransaction)
 	fmt.Println("Serving " + appdir + " to " + addr)
-	fmt.Println("users: 0")
+	fmt.Println(time.Now().Format(tf) + " users: 0")
 	log.Println("---")
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
