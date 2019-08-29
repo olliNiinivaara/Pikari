@@ -18,8 +18,8 @@ var users = make(map[string]*user)
 
 func addUser(u *user) {
 	mutex.Lock()
-	if _, ok := users[u.id]; ok {
-		removeUser(u, false)
+	if existinguser, ok := users[u.id]; ok {
+		removeUser(existinguser, false)
 	}
 	users[u.id] = u
 	fmt.Println("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)))
@@ -31,8 +31,13 @@ func removeUser(u *user, lock bool) {
 		mutex.Lock()
 		defer mutex.Unlock()
 	}
-	rollback(u, false)
+	currentuser, ok := users[u.id]
+	if !ok || u != currentuser {
+		return
+	}
 	delete(users, u.id)
+	rollback(u, false)
+	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	fmt.Println("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)))
 }
 
@@ -51,23 +56,19 @@ func checkUser(u *user, pw string) bool {
 		return false
 	}
 	if pw != password {
-		log.Println("wrong password detected")
-		removeUser(u, true)
+		log.Println("wrong password: " + u.id)
 		return false
 	}
 	return true
 }
 
 func checkUserstring(uid string, pw string) bool {
-	var theuser *user
-	var ok bool
-	if theuser, ok = users[uid]; !ok {
+	if _, ok := users[uid]; !ok {
 		log.Println("unsigned user detected: " + uid)
 		return false
 	}
 	if pw != password {
-		log.Println("wrong password detected")
-		removeUser(theuser, true)
+		log.Println("wrong password: " + uid)
 		return false
 	}
 	return true

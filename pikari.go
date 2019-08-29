@@ -50,13 +50,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - user name missing in web socket handshake")
 		return
 	}
-
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
 		return
 	}
-
 	theuser := user{id: userid, conn: c}
 	addUser(&theuser)
 	defer removeUser(&theuser, true)
@@ -64,39 +62,41 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, msg, err := c.ReadMessage()
 		if err != nil {
-			log.Println("Pikari server error - web socket read failed:" + err.Error())
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				log.Println("Pikari server error - web socket read failed:" + err.Error())
+			}
 			break
 		}
-		data := wsdata{}
-		err = json.Unmarshal(msg, &data)
+		request := wsdata{}
+		err = json.Unmarshal(msg, &request)
 		if err != nil {
 			log.Println("Pikari server error - ws parsing error: " + err.Error())
 			break
 		}
-		if !checkUser(&theuser, data.Password) {
+		if !checkUser(&theuser, request.Password) {
 			break
 		}
-		switch data.Messagetype {
+		switch request.Messagetype {
 		case "log":
-			log.Println(&data.Message)
+			log.Println(&request.Message)
 		case "start":
-			//changemessage := changestruct{"start", make(map[string]json.RawMessage)}
-			changemessage := changestruct{"start", make(map[string]string)}
-			//changemessage.Fields["jokukenttä"] = json.RawMessage(`{"arvo1": "joppis"}`)
-			changemessage.Fields["jokukenttä"] = `{"arvo1": "joppis"}`
-			jsonresponse, err := json.Marshal(changemessage)
+			mutex.Lock()
+			response, err := json.Marshal(datastructure{"start", data})
 			if err != nil {
-				log.Fatal("Pikari server error - data parsing error at start: " + err.Error())
+				log.Println("Pikari server error - data parsing error: " + err.Error())
+				mutex.Unlock()
+				break
 			}
-			transmitMessage(&wsdata{"server", "", []string{theuser.id}, "change", string(jsonresponse)}, true)
+			transmitMessage(&wsdata{"server", "", []string{theuser.id}, "change", string(response)}, false)
+			mutex.Unlock()
 		case "message":
-			transmitMessage(&data, true)
+			transmitMessage(&request, true)
 		case "commit":
-			commit(&theuser, &data.Message)
+			commit(&theuser, &request.Message)
 		case "rollback":
 			rollback(&theuser, true)
 		default:
-			log.Println("Pikari server error - web socket message type unknown: " + data.Messagetype)
+			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
 		}
 	}
 }
@@ -129,6 +129,9 @@ func main() {
 	defer logfile.Close()
 	log.SetOutput(logfile)
 	fmt.Println("Pikari 0.2 starting")
+	openDb()
+	defer closeDb()
+	getData()
 	fs := http.FileServer(http.Dir(appdir))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
@@ -144,7 +147,9 @@ func main() {
 	fmt.Println("Serving " + appdir + " to " + addr)
 	fmt.Println(time.Now().Format(tf) + " users: 0")
 	log.Println("---")
-	log.Fatal(http.ListenAndServe(addr, nil))
+	err = http.ListenAndServe(addr, nil)
+	fmt.Println(err)
+	log.Fatal(err)
 }
 
 const pikari = ``

@@ -7,9 +7,8 @@ import (
 	"time"
 )
 
-type changestruct struct {
+type datastructure struct {
 	Description string `json:"description"`
-	//Fields      map[string]json.RawMessage `json:"fields"`
 	Fields map[string]string `json:"fields"`
 }
 
@@ -24,6 +23,7 @@ type fieldstruct struct {
 	lockedsince string
 }
 
+var data = make(map[string]string)
 var lockedfields = make(map[string]fieldstruct)
 
 func startTransaction(w http.ResponseWriter, r *http.Request) {
@@ -80,11 +80,11 @@ func lockFields(request transactionrequest) *[]byte {
 	return &ok
 }
 
-func commit(u *user, data *string) {
-	var request changestruct
-	err := json.Unmarshal([]byte(*data), &request)
+func commit(u *user, newdata *string) {
+	var request datastructure
+	err := json.Unmarshal([]byte(*newdata), &request)
 	if err != nil {
-		log.Println("Pikari server error - could not unmarshal commit data: " + string(*data))
+		log.Println("Pikari server error - could not unmarshal commit data: " + string(*newdata))
 		rollback(u, true)
 		return
 	}
@@ -108,6 +108,29 @@ func commit(u *user, data *string) {
 	if err != nil {
 		log.Println("Pikari server error - could not marshal commit data: " + err.Error())
 		return
+	}
+	tx, err := database.Begin()
+	if err != nil {
+		log.Fatal("Pikari server error - could not start transaction: " + err.Error())
+	}
+	for field := range request.Fields {
+		err = update(tx, field, request.Fields[field])
+		if err != nil {
+			break
+		}
+	}
+	if err != nil {
+		log.Println("Pikari server error - could not commit data: " + err.Error())
+		tx.Rollback()
+		rollback(u, false)
+		return
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal("Pikari server error - could not commit data: " + err.Error())
+	}
+	for field := range request.Fields {
+		data[field] = request.Fields[field]
 	}
 	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: string(jsonresponse)}, false)
 }
