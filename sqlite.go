@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
+	"fmt"
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -10,6 +12,7 @@ import (
 var database *sql.DB
 var get *sql.Stmt
 var set *sql.Stmt
+var buffer bytes.Buffer
 
 func openDb() {
 	var err error
@@ -47,27 +50,41 @@ func closeDb() {
 		log.Println(err)
 	}
 	database.Close()
+	fmt.Println("Good bye!")
 }
 
-func getData() {
+func getData() []byte {
+	if buffer.Len() > 0 {
+		return buffer.Bytes()
+	}
 	rows, err := get.Query()
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer rows.Close()
+	buffer.WriteString("{")
 	for rows.Next() {
-		var field string
-		var value string
+		var field []byte
+		var value []byte
 		err = rows.Scan(&field, &value)
 		if err != nil {
 			log.Fatal(err)
 		}
-		data[field] = value
+		buffer.WriteString(`"`)
+		buffer.Write(field)
+		buffer.WriteString(`":`)
+		buffer.Write(value)
+		buffer.WriteString(",")
 	}
+	if buffer.Len() > 1 {
+		buffer.Truncate(buffer.Len() - 1)
+	}
+	buffer.WriteString("}")
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
 	}
+	return buffer.Bytes()
 }
 
 func update(tx *sql.Tx, field string, value string) error {

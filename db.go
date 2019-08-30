@@ -3,14 +3,8 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"net/http"
 	"time"
 )
-
-type datastructure struct {
-	Description string `json:"description"`
-	Fields map[string]string `json:"fields"`
-}
 
 type transactionrequest struct {
 	User     string   `json:"user"`
@@ -18,36 +12,45 @@ type transactionrequest struct {
 	Fields   []string `json:"fields"`
 }
 
-type fieldstruct struct {
-	lockedby    *user
-	lockedsince string
+type fieldlock struct {
+	locker      *user
+	Lockedby    string `json:"lockedby"`
+	Lockedsince string `json:"lockedsince"`
 }
 
-var data = make(map[string]string)
-var lockedfields = make(map[string]fieldstruct)
+var lockedfields = make(map[string]fieldlock)
 
-func startTransaction(w http.ResponseWriter, r *http.Request) {
-	decoder := json.NewDecoder(r.Body)
+func startTransaction(u *user, r *string) {
 	var request transactionrequest
-	err := decoder.Decode(&request)
+	err := json.Unmarshal([]byte(*r), &request)
 	if err != nil {
 		log.Println("Pikari server error - transaction request parsing error: " + err.Error())
 		return
 	}
-	w.Header().Set("Content-Type", "text/json")
 	if len(request.Fields) == 0 {
-		w.Write([]byte("'error':'No field(s) defined for transaction'"))
-	} else {
-		w.Write(*lockFields(request))
+		return
 	}
+	alreadyLocked := *lockFields(request)
+	if len(alreadyLocked) > 2 {
+		return
+	}
+	transmitMessage(&wsdata{Sender: request.User, Receivers: []string{}, Messagetype: "transaction", Message: string(*getLocks(request.Fields))}, true)
 }
 
-func getLocks() *[]byte {
-	s := make([]string, 0, len(lockedfields))
-	for f := range lockedfields {
-		s = append(s, f)
+func getLocks(fields []string) *[]byte {
+	var jsonresponse []byte
+	var err error
+	if fields == nil {
+		jsonresponse, err = json.Marshal(lockedfields)
+	} else {
+		locks := make(map[string]fieldlock)
+		for f := range lockedfields {
+			if contains(fields, f) {
+				locks[f] = lockedfields[f]
+			}
+		}
+		jsonresponse, err = json.Marshal(locks)
 	}
-	jsonresponse, err := json.Marshal(s)
 	if err != nil {
 		log.Fatal("Pikari server error - could not jsonify lockedfields")
 	}
@@ -56,32 +59,44 @@ func getLocks() *[]byte {
 
 func lockFields(request transactionrequest) *[]byte {
 	if !checkUserstring(request.User, request.Password) {
-		s := []byte("No credentials")
+		s := []byte("{'error': 'No credentials'}")
 		return &s
 	}
 	mutex.Lock()
 	defer mutex.Unlock()
 	for i := range lockedfields {
-		if lockedfields[i].lockedby.id == request.User {
-			return getLocks()
+		if lockedfields[i].locker.id == request.User {
+			return getLocks(nil)
 		}
 	}
 	for _, field := range request.Fields {
 		if lockedfield, ok := lockedfields[field]; ok {
-			if !wasUserdead(lockedfield.lockedby) {
-				return getLocks()
+			if !wasUserdead(lockedfield.locker) {
+				return getLocks(nil)
 			}
 		}
 	}
 	for _, f := range request.Fields {
-		lockedfields[f] = fieldstruct{users[request.User], time.Now().String()}
+		lockedfields[f] = fieldlock{users[request.User], request.User, time.Now().UTC().Format(time.RFC3339)}
 	}
 	var ok = []byte("{}")
 	return &ok
 }
 
+func removeLocks(u *user) {
+	for f := range lockedfields {
+		if lockedfields[f].locker == u {
+			delete(lockedfields, f)
+		}
+	}
+}
+
 func commit(u *user, newdata *string) {
-	var request datastructure
+	type indata struct {
+		Description string            `json:"description"`
+		Fields      map[string]string `json:"fields"`
+	}
+	var request indata
 	err := json.Unmarshal([]byte(*newdata), &request)
 	if err != nil {
 		log.Println("Pikari server error - could not unmarshal commit data: " + string(*newdata))
@@ -91,22 +106,17 @@ func commit(u *user, newdata *string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	for field := range request.Fields {
-		var lockedfield fieldstruct
+		var lockedfield fieldlock
 		var ok bool
 		if lockedfield, ok = lockedfields[field]; !ok {
 			delete(request.Fields, field)
 		}
-		if lockedfield.lockedby != u {
+		if lockedfield.locker != u {
 			delete(request.Fields, field)
 		}
 	}
-	defer rollback(u, false)
+	defer removeLocks(u)
 	if len(request.Fields) == 0 {
-		return
-	}
-	jsonresponse, err := json.Marshal(request)
-	if err != nil {
-		log.Println("Pikari server error - could not marshal commit data: " + err.Error())
 		return
 	}
 	tx, err := database.Begin()
@@ -129,10 +139,8 @@ func commit(u *user, newdata *string) {
 	if err != nil {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
-	for field := range request.Fields {
-		data[field] = request.Fields[field]
-	}
-	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: string(jsonresponse)}, false)
+	buffer.Reset()
+	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
 func rollback(u *user, lock bool) {
@@ -140,9 +148,16 @@ func rollback(u *user, lock bool) {
 		mutex.Lock()
 		defer mutex.Unlock()
 	}
-	for i := range lockedfields {
-		if lockedfields[i].lockedby == u {
-			delete(lockedfields, i)
+	locks := make(map[string]fieldlock)
+	for f := range lockedfields {
+		if lockedfields[f].locker == u {
+			locks[f] = lockedfields[f]
+			delete(lockedfields, f)
 		}
 	}
+	jsonresponse, err := json.Marshal(locks)
+	if err != nil {
+		log.Fatal("Pikari server error - could not marshal rollbacking locks")
+	}
+	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "rollback", Message: string(jsonresponse)}, false)
 }
