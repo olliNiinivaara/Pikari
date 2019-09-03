@@ -111,7 +111,7 @@ func main() {
 	flag.IntVar(&port, "port", 8080, "http service port")
 	addr := "127.0.0.1:" + strconv.Itoa(port)
 	_, callerFile, _, _ := runtime.Caller(0)
-	exedir = filepath.Dir(callerFile)
+	exedir = filepath.Dir(callerFile) + string(filepath.Separator)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
 	flag.StringVar(&password, "password", "", "password for the application")
 	flag.Parse()
@@ -120,7 +120,7 @@ func main() {
 		os.Exit(1)
 	}
 	if !filepath.IsAbs(appdir) {
-		appdir = exedir + string(filepath.Separator) + appdir + string(filepath.Separator)
+		appdir = exedir + appdir + string(filepath.Separator)
 	}
 	_, err := os.Stat(appdir)
 	if os.IsNotExist(err) {
@@ -141,7 +141,7 @@ func main() {
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
 	http.HandleFunc("/ws", ws)
-	_, err = os.Stat("pikari.js")
+	_, err = os.Stat(exedir + "pikari.js")
 	if os.IsNotExist(err) {
 		createPikariJs()
 	}
@@ -164,7 +164,7 @@ func main() {
 }
 
 func createPikariJs() {
-	file, err := os.Create("pikari.js")
+	file, err := os.Create(exedir + "pikari.js")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
