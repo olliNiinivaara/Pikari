@@ -161,3 +161,26 @@ func rollback(u *user, lock bool) {
 	}
 	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "rollback", Message: string(jsonresponse)}, false)
 }
+
+func drop() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	lockedfields = make(map[string]fieldlock)
+	tx, err := database.Begin()
+	if err != nil {
+		log.Fatal("Pikari server error - could not start drop transaction: " + err.Error())
+	}
+	err = dropData(tx)
+	if err != nil {
+		log.Println("Pikari server error - could not drop: " + err.Error())
+		tx.Rollback()
+		return
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal("Pikari server error - could not commit drop: " + err.Error())
+	}
+	buffer.Reset()
+	buffer.WriteString("{}")
+	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "drop", Message: ""}, false)
+}

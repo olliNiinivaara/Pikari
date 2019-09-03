@@ -12,6 +12,7 @@ import (
 var database *sql.DB
 var get *sql.Stmt
 var set *sql.Stmt
+var del *sql.Stmt
 var buffer bytes.Buffer
 
 func openDb() {
@@ -40,6 +41,11 @@ func openDb() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	del, err = database.Prepare("DELETE FROM Data WHERE field = ?;")
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func closeDb() {
@@ -50,7 +56,7 @@ func closeDb() {
 		log.Println(err)
 	}
 	database.Close()
-	fmt.Println("Good bye!")
+	fmt.Println("\nGood bye!")
 }
 
 func getData() []byte {
@@ -88,6 +94,17 @@ func getData() []byte {
 }
 
 func update(tx *sql.Tx, field string, value string) error {
-	_, err := tx.Stmt(set).Exec(field, value)
+	var err error
+	if value == "null" {
+		_, err = tx.Stmt(del).Exec(field)
+	} else {
+		_, err = tx.Stmt(set).Exec(field, value)
+	}
+	return err
+}
+
+func dropData(tx *sql.Tx) error {
+	_, err := database.Exec("DROP TABLE Data")
+	_, err = database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);")
 	return err
 }
