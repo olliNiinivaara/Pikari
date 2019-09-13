@@ -46,6 +46,12 @@ Pikari.mylocks = []
  */
 Pikari.locks = {}
 
+
+Pikari.enc = function(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+
 Pikari.generateKey = function() {
   return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
 }
@@ -56,14 +62,11 @@ Pikari.generateKey = function() {
  */
 Pikari.user = "Anon-"+ Pikari.generateKey()
 
-Pikari.escapeHtml = function(s) {
-  s = String(s).replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;')
-  if (s.startsWith("@")) s = "at" + s.substring(1)
-  return s
-}
-
 Pikari.start = function(user, password) {
-  if (user) Pikari.user = encodeURIComponent(Pikari.escapeHtml(user))
+  if (user) {
+    if (user.startsWith("@")) user = "at" + user.substring(1)
+    Pikari.user = user
+  }
   if (!password) password = ""
   Pikari._password = String(password)
   Pikari._startWebSocket()
@@ -108,8 +111,13 @@ Pikari.setLocks = async function(locks) {
   if (locks.length == 0) throw("No locks to lock")
   Pikari.locks = "inflight"
   let response = await fetch("/setlocks", {method: "post", body: JSON.stringify({"user": "@"+Pikari.user, "password": Pikari.password, "locks": locks})})
-  if (Pikari.locks == "inflight") {
+  if (Pikari.locks === "inflight") {
     Pikari.locks = await response.json()
+    if (Pikari.locks["error"]) {
+      Pikari._reportError(Pikari.locks["error"])
+      Pikari.locks = new Map()
+      return false
+    }
     Pikari.mylocks = []
     Object.keys(Pikari.locks).forEach(l => { if (Pikari.locks[l].lockedby == Pikari.userdata) Pikari.mylocks.push(l) })
   }
@@ -121,8 +129,11 @@ Pikari.setLocks = async function(locks) {
 
 Pikari.commit = function() {
   if (Pikari.mylocks.length == 0) throw("No transaction to commit")
-  let newdata = Object.fromEntries(Pikari.data)
-  Object.keys(newdata).forEach(k => { newdata[k] = JSON.stringify(newdata[k])})
+  let newdata = {}
+  Pikari.data.forEach((value, field) => {
+    const newvalue = JSON.stringify(value)
+    if (!Pikari._oldData.has(field) || Pikari._oldData.get(field) != newvalue) newdata[JSON.stringify(field)] = newvalue
+  })
   newdata = JSON.stringify(newdata)
   Pikari._sendToServer("commit", newdata)
 }
@@ -180,7 +191,10 @@ Pikari._handleStart = function(d) {
 Pikari._handleChange = function(d) {
   const newdata = JSON.parse(d.message)
   if (Object.keys(newdata).length == 0) Pikari.data = new Map()
-  Object.entries(newdata).forEach(([field, data]) => { if (data == "null") Pikari.data.delete(field); else Pikari.data.set(field, JSON.parse(data)) })
+  Object.entries(newdata).forEach(([field, data]) => {
+    const fieldname = JSON.parse(field)
+    if (data == "null") Pikari.data.delete(fieldname); else Pikari.data.set(fieldname, JSON.parse(data))
+  })
   for(let l of Pikari._changelisteners) l(d.sender, Object.keys(newdata))
 }
 

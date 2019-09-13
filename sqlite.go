@@ -76,9 +76,8 @@ func getData() []byte {
 		if err != nil {
 			log.Fatal(err)
 		}
-		buffer.WriteString(`"`)
 		buffer.Write(field)
-		buffer.WriteString(`":`)
+		buffer.WriteString(`:`)
 		buffer.Write(value)
 		buffer.WriteString(",")
 	}

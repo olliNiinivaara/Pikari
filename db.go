@@ -31,18 +31,19 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(b, &request)
 	if err != nil {
 		log.Println("Pikari server error - setLocks parsing error: " + err.Error())
-		w.Write([]byte("{'error': 'invalid setLocks request'}"))
+		w.Write([]byte(`{"error": "invalid setLocks request"}`))
 	} else {
 		var theuser = getUser(request.User, request.Password)
 		if theuser == nil {
-			w.Write([]byte("{'error': 'No credentials'}"))
+			w.Write([]byte(`{"error": "No credentials"}`))
 		} else {
 			mutex.Lock()
 			removeLocks(theuser, false)
-			notifyLocking(&theuser.id, tryToAcquireLocks(theuser, request))
-			mutex.Unlock()
+			incremented := tryToAcquireLocks(theuser, request)
 			b, _ := json.Marshal(locks)
 			w.Write(b)
+			notifyLocking(&theuser.id, incremented)
+			mutex.Unlock()
 		}
 	}
 }
