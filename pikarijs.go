@@ -24,7 +24,7 @@ window.Pikari = new Object()
  *  @description Local copy of the whole database. Changes committed to database by any user are automatically updated to it.
  *  @example Pikari.data[Pikari.userdata] = "some data"
  */
-Pikari.data = {}
+Pikari.data = new Map()
 
 /** 
  * @description Names of locks that are currently held by the current user.
@@ -56,34 +56,14 @@ Pikari.generateKey = function() {
  */
 Pikari.user = "Anon-"+ Pikari.generateKey()
 
-
-/** 
- * @description Name of the user's personal database field (simply user with a leading @ - to prevent name clashes)
- */
-Pikari.userdata = "@" + Pikari.user
-
-
-/**
- * Helper function to strip a leading character from string
- * If user can set id's like user names, database fields or locks,
- * they should be escaped with an extra character to prevent name clashes with other ids
- * (and javascript object prototype properties)
- * @param {string} escapedstring - (starting with an extra character)
- * @returns {string} original string
- */
-Pikari.unescId = function(escapedstring) {
-  return escapedstring.substring(1)
-}
-
 Pikari.escapeHtml = function(s) {
-  return String(s).replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;')
+  s = String(s).replace(/[&<]/g, c => c === '&' ? '&amp;' : '&lt;')
+  if (s.startsWith("@")) s = "at" + s.substring(1)
+  return s
 }
 
 Pikari.start = function(user, password) {
-  if (user) {
-    Pikari.user = encodeURIComponent(escapeHtml(user))
-    Pikari.userdata = "@" + Pikari.user
-  }
+  if (user) Pikari.user = encodeURIComponent(Pikari.escapeHtml(user))
   if (!password) password = ""
   Pikari._password = String(password)
   Pikari._startWebSocket()
@@ -119,43 +99,54 @@ Pikari.sendMessage = function(message, receivers) {
 }
 
 Pikari.getFields = function() {
-  return Object.keys(Pikari.data)
+  return Array.from(Pikari.data.keys())
 }
 
 Pikari.setLocks = async function(locks) {
   if (!locks || (Array.isArray(locks) && locks.length == 0)) locks = Pikari.getFields()
   if (!Array.isArray(locks)) locks  = [String(locks)]
   if (locks.length == 0) throw("No locks to lock")
-  let response = await fetch("/setlocks", {method: "post", body: JSON.stringify({"user": Pikari.userdata, "password": Pikari.password, "locks": locks})})
-  Pikari.locks = await response.json()
-  Pikari.mylocks = []
-  Object.keys(Pikari.locks).forEach(l => { if (Pikari.locks[l].lockedby == Pikari.userdata) Pikari.mylocks.push(l) })
+  Pikari.locks = "inflight"
+  let response = await fetch("/setlocks", {method: "post", body: JSON.stringify({"user": "@"+Pikari.user, "password": Pikari.password, "locks": locks})})
+  if (Pikari.locks == "inflight") {
+    Pikari.locks = await response.json()
+    Pikari.mylocks = []
+    Object.keys(Pikari.locks).forEach(l => { if (Pikari.locks[l].lockedby == Pikari.userdata) Pikari.mylocks.push(l) })
+  }
   if (Pikari.mylocks.length == 0) return false
-  Pikari._oldData = {}
-  Pikari.getFields().forEach(f => { Pikari._oldData[f] = JSON.stringify(Pikari.data[f]) })
+  Pikari._oldData = new Map()
+  Pikari.data.forEach((value, field) => { Pikari._oldData.set(field, JSON.stringify(value)) })
   return true
 }
 
 Pikari.commit = function() {
   if (Pikari.mylocks.length == 0) throw("No transaction to commit")
-  let newdata = {}
-  Pikari.getFields().forEach(f => {
-    const value = JSON.stringify(Pikari.data[f])
-    if (!Pikari._oldData[f] || Pikari._oldData[f] != value) newdata[f] = value
-  })
+  let newdata = Object.fromEntries(Pikari.data)
+  Object.keys(newdata).forEach(k => { newdata[k] = JSON.stringify(newdata[k])})
   newdata = JSON.stringify(newdata)
   Pikari._sendToServer("commit", newdata)
 }
 
-Pikari.rollback = async function() {
+Pikari.rollback = function() {
+  //TODO: report only rollbacked fields, NOT all fields
   if (Pikari.mylocks.length == 0) throw("No transaction to rollback")
-  const r = await fetch("/setlocks", {method: "post", body: JSON.stringify({"user": Pikari.userdata, "password": Pikari.password, "locks": []})})
-  await r.text()
-  Pikari.data = JSON.parse(JSON.stringify(Pikari._oldData))
+  Pikari.data = new Map()
+  Pikari._oldData.forEach(v, f => { Pikari.data.set(f, JSON.parse(v)) })
+  const allfields = Pikari.getFields()
+  for(let l of Pikari._changelisteners) l("rollback", allfields)
+  fetch("/setlocks", {method: "post", body: JSON.stringify({"user": "@"+Pikari.user, "password": Pikari.password, "locks": []})})
 }
 
 Pikari.dropData = function() {
   Pikari._sendToServer("dropdata")
+}
+
+Pikari.setUserdata = function(value) {
+  Pikari.data.set("@"+Pikari.user, value)
+}
+
+Pikari.getUserdata = function() {
+  return Pikari.data.get("@"+Pikari.user)
 }
 
 
@@ -177,22 +168,19 @@ Pikari._reportError = function(error) {
 
 Pikari._sendToServer = function(messagetype, message) {
   if (!Pikari._ws) alert ("No connection server!")
-  else Pikari._ws.send(JSON.stringify({"sender": Pikari.userdata, "password":Pikari._password, "messagetype": messagetype, "message": message}))
+  else Pikari._ws.send(JSON.stringify({"sender": "@"+Pikari.user, "password":Pikari._password, "messagetype": messagetype, "message": message}))
 }
 
 Pikari._handleStart = function(d) {
   const startdata = JSON.parse(d.message)
-  Object.entries(startdata).forEach(([field, data]) => { Pikari.data[field] = data })
+  Object.entries(startdata).forEach(([field, data]) => { Pikari.data.set(field, data) })
   for(let l of Pikari._startlisteners) l()  
 }
 
 Pikari._handleChange = function(d) {
   const newdata = JSON.parse(d.message)
-  if (Object.keys(newdata).length == 0) Pikari.data = {}
-  Object.entries(newdata).forEach(([field, data]) => {
-    Pikari.data[field] = JSON.parse(data)
-    if (Pikari.data[field] == null) delete Pikari.data[field]
-  })
+  if (Object.keys(newdata).length == 0) Pikari.data = new Map()
+  Object.entries(newdata).forEach(([field, data]) => { if (data == "null") Pikari.data.delete(field); else Pikari.data.set(field, JSON.parse(data)) })
   for(let l of Pikari._changelisteners) l(d.sender, Object.keys(newdata))
 }
 
@@ -200,12 +188,15 @@ Pikari._handleLocking = function(d) {
   const lockmessage = JSON.parse(d.message)
   Pikari.locks = lockmessage.locks
   Pikari.mylocks = []
-  Object.keys(Pikari.locks).forEach(l => { if (Pikari.locks[l].lockedby == Pikari.userdata) Pikari.mylocks.push(l) })
+  Object.keys(Pikari.locks).forEach(l => {
+    Pikari.locks[l].lockedby = Pikari.locks[l].lockedby.substring(1)
+    if (Pikari.locks[l].lockedby == Pikari.user) Pikari.mylocks.push(l)
+  })
   for(let l of Pikari._locklisteners) l(d.sender, lockmessage.incremented)
 }
 
 Pikari._startWebSocket = function() {
-  Pikari._ws = new WebSocket("ws://"+document.location.host+"/ws?user="+Pikari.userdata)
+  Pikari._ws = new WebSocket("ws://"+document.location.host+"/ws?user="+"@"+Pikari.user)
 
   Pikari._ws.onopen = function() {  
     Pikari._sendToServer("start")
@@ -213,7 +204,7 @@ Pikari._startWebSocket = function() {
 
   Pikari._ws.onclose = function() {
     Pikari._ws = null
-    Pikari.data = {}
+    Pikari.data = new Map()
     for(let l of Pikari._stoplisteners) l()
   }
 
