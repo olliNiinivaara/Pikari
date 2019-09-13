@@ -36,7 +36,7 @@ func removeUser(u *user, lock bool) {
 		return
 	}
 	delete(users, u.id)
-	rollback(u, false)
+	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
 }
@@ -62,14 +62,16 @@ func checkUser(u *user, pw string) bool {
 	return true
 }
 
-func checkUserstring(uid string, pw string) bool {
-	if _, ok := users[uid]; !ok {
-		log.Println("unsigned user detected: " + uid)
-		return false
-	}
+func getUser(uid string, pw string) *user {
 	if pw != password {
 		log.Println("wrong password: " + uid)
-		return false
+		return nil
 	}
-	return true
+	var u *user
+	var ok bool
+	if u, ok = users[uid]; !ok {
+		log.Println("unsigned user detected: " + uid)
+		return nil
+	}
+	return u
 }

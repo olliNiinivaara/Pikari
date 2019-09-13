@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -37,7 +38,7 @@ var upgrader = websocket.Upgrader{}
 func favicon(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/x-icon")
 	w.Header().Set("Cache-Control", "public, max-age=7776000")
-	fmt.Fprint(w, "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=\n\n")
+	io.WriteString(w, "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=\n\n")
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
@@ -79,14 +80,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			start(&theuser)
 		case "message":
 			transmitMessage(&request, true)
-		case "transaction":
-			startTransaction(&theuser, &request.Message)
 		case "commit":
 			commit(&theuser, &request.Message)
-		case "rollback":
-			rollback(&theuser, true)
-		case "drop":
-			drop()
+		case "dropdata":
+			dropData()
 		default:
 			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
 		}
@@ -94,16 +91,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 }
 
 func start(theuser *user) {
-	type startdata struct {
-		Description string `json:"description"`
-		Fields      string `json:"fields"`
-	}
 	mutex.Lock()
-	response, err := json.Marshal(startdata{"start", string(getData())})
-	if err != nil {
-		log.Fatal("Pikari server error - data parsing error: " + err.Error())
-	}
-	transmitMessage(&wsdata{"server", "", []string{theuser.id}, "change", string(response)}, false)
+	transmitMessage(&wsdata{"server", "", []string{theuser.id}, "start", string(getData())}, false)
 	mutex.Unlock()
 }
 
@@ -134,13 +123,14 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println(time.Now().Format(tf) + " Pikari 0.4 starting")
+	fmt.Println(time.Now().Format(tf) + " Pikari 0.5 starting")
 	openDb()
 	getData()
 	fs := http.FileServer(http.Dir(appdir))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
 	http.HandleFunc("/ws", ws)
+	http.HandleFunc("/setlocks", setLocks)
 	_, err = os.Stat(exedir + "pikari.js")
 	if os.IsNotExist(err) {
 		createPikariJs()

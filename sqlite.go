@@ -103,7 +103,7 @@ func update(tx *sql.Tx, field string, value string) error {
 	return err
 }
 
-func dropData(tx *sql.Tx) error {
+func dropDb(tx *sql.Tx) error {
 	_, err := database.Exec("DROP TABLE Data")
 	_, err = database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);")
 	return err
