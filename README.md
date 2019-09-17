@@ -1,4 +1,4 @@
-# 🏆 Pikari 0.4
+# 🏆 Pikari 0.6
 - Build working prototypes - best way to elicitate UX and functional requirements
 - Back-end is ready-to-run - just design the user interface
 - Minimal and easy-to-use Javascript API - get productive in minutes
