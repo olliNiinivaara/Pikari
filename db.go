@@ -39,27 +39,26 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 		} else {
 			mutex.Lock()
 			removeLocks(theuser, false)
-			incremented := tryToAcquireLocks(theuser, request)
+			tryToAcquireLocks(theuser, request)
 			b, _ := json.Marshal(locks)
 			w.Write(b)
-			notifyLocking(&theuser.id, incremented)
+			notifyLocking(&theuser.id)
 			mutex.Unlock()
 		}
 	}
 }
 
-func tryToAcquireLocks(u *user, r lockrequest) bool {
+func tryToAcquireLocks(u *user, r lockrequest) {
 	for _, l := range r.Locks {
 		if locked, ok := locks[l]; ok {
 			if locked.locker != u && !wasUserdead(locked.locker) {
-				return false
+				return
 			}
 		}
 	}
 	for _, l := range r.Locks {
-		locks[l] = lock{u, u.id, time.Now().UTC().Format(time.RFC3339)}
+		locks[l] = lock{u, getUsername(u.id), time.Now().UTC().Format(time.RFC3339)}
 	}
-	return true
 }
 
 func removeLocks(u *user, notify bool) {
@@ -71,18 +70,13 @@ func removeLocks(u *user, notify bool) {
 		}
 	}
 	if notify && trueremoval {
-		notifyLocking(&u.id, false)
+		notifyLocking(&u.id)
 	}
 }
 
-func notifyLocking(sender *string, incremented bool) {
-	type lockmessage struct {
-		Incremented bool             `json:"incremented"`
-		Locks       *map[string]lock `json:"locks"`
-	}
-	var message = lockmessage{Incremented: incremented, Locks: &locks}
-	b, _ := json.Marshal(message)
-	transmitMessage(&wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
+func notifyLocking(sender *string) {
+	b, _ := json.Marshal(locks)
+	transmitMessage(&wsdata{Sender: getUsername(*sender), Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
 }
 
 func commit(u *user, newdata *string) {
@@ -103,9 +97,8 @@ func commit(u *user, newdata *string) {
 		log.Fatal("Pikari server error - could not start transaction: " + err.Error())
 	}
 	for field := range fields {
-		err = update(tx, field, fields[field])
-		if err != nil {
-			break
+		if ok := update(tx, field, fields[field]); !ok {
+			return
 		}
 	}
 	if err != nil {
@@ -118,7 +111,7 @@ func commit(u *user, newdata *string) {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
 	buffer.Reset()
-	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
+	transmitMessage(&wsdata{Sender: getUsername(u.id), Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
 func dropData() {
@@ -141,6 +134,6 @@ func dropData() {
 	}
 	buffer.Reset()
 	buffer.WriteString("{}")
-	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "lock", Message: "{\"incremented\":false,\"locks\":{}}"}, false)
+	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
 	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "change", Message: "{}"}, false)
 }

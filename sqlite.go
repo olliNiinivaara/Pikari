@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -15,22 +16,22 @@ var set *sql.Stmt
 var del *sql.Stmt
 var buffer bytes.Buffer
 
-func openDb() {
+func openDb(maxPagecount int) {
 	var err error
 	database, err = sql.Open("sqlite3", appdir+"data.db")
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = database.Exec("PRAGMA synchronous = OFF;")
-	if err != nil {
+	if _, err = database.Exec("PRAGMA synchronous = OFF;"); err != nil {
 		log.Fatal(err)
 	}
-	_, err = database.Exec("PRAGMA journal_mode = OFF;")
-	if err != nil {
+	if _, err = database.Exec("PRAGMA journal_mode = OFF;"); err != nil {
 		log.Fatal(err)
 	}
-	_, err = database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);")
-	if err != nil {
+	if _, err = database.Exec("PRAGMA max_page_count = " + strconv.Itoa(maxPagecount) + ";"); err != nil {
+		log.Fatal(err)
+	}
+	if _, err = database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);"); err != nil {
 		log.Fatal(err)
 	}
 	get, err = database.Prepare("SELECT field, value FROM data;")
@@ -41,7 +42,6 @@ func openDb() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	del, err = database.Prepare("DELETE FROM Data WHERE field = ?;")
 	if err != nil {
 		log.Fatal(err)
@@ -51,8 +51,10 @@ func openDb() {
 func closeDb() {
 	get.Close()
 	set.Close()
-	_, err := database.Exec("PRAGMA optimize;")
-	if err != nil {
+	if _, err := database.Exec("VACUUM;"); err != nil {
+		log.Println(err)
+	}
+	if _, err := database.Exec("PRAGMA optimize;"); err != nil {
 		log.Println(err)
 	}
 	database.Close()
@@ -92,18 +94,30 @@ func getData() []byte {
 	return buffer.Bytes()
 }
 
-func update(tx *sql.Tx, field string, value string) error {
+func update(tx *sql.Tx, field string, value string) bool {
 	var err error
 	if value == "null" {
 		_, err = tx.Stmt(del).Exec(field)
 	} else {
 		_, err = tx.Stmt(set).Exec(field, value)
 	}
-	return err
+	if err != nil {
+		if config.Autodrop {
+			tx.Rollback()
+			err = dropDb(tx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return false
+		}
+		log.Fatal(err)
+	}
+	return true
 }
 
 func dropDb(tx *sql.Tx) error {
 	_, err := database.Exec("DROP TABLE Data")
 	_, err = database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);")
+	log.Println("Database dropped")
 	return err
 }

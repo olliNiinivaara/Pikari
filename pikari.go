@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/gorilla/websocket"
 )
 
@@ -24,6 +25,14 @@ const tf = "01-02 15:04"
 var mutex sync.Mutex
 
 var appdir, exedir, port, password = "", "", 0, ""
+
+var config configuration
+
+type configuration struct {
+	Port         int
+	Maxpagecount int
+	Autodrop     bool
+}
 
 type wsdata struct {
 	Sender      string   `json:"sender"`
@@ -93,13 +102,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 func start(theuser *user) {
 	mutex.Lock()
-	transmitMessage(&wsdata{"server", "", []string{theuser.id}, "start", string(getData())}, false)
+	transmitMessage(&wsdata{"server", "", []string{getUsername(theuser.id)}, "start", string(getData())}, false)
 	mutex.Unlock()
 }
 
 func main() {
-	flag.IntVar(&port, "port", 8080, "http service port")
-	addr := "127.0.0.1:" + strconv.Itoa(port)
 	_, callerFile, _, _ := runtime.Caller(0)
 	exedir = filepath.Dir(callerFile) + string(filepath.Separator)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
@@ -124,18 +131,17 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println(time.Now().Format(tf) + " Pikari 0.5 starting")
-	openDb()
+	fmt.Println(time.Now().Format(tf) + " Pikari 0.6 starting")
+	readConfig()
+	addr := "127.0.0.1:" + strconv.Itoa(config.Port)
+	openDb(config.Maxpagecount)
 	getData()
 	fs := http.FileServer(http.Dir(appdir))
 	http.Handle("/", fs)
 	http.HandleFunc("/favicon.ico", favicon)
 	http.HandleFunc("/ws", ws)
 	http.HandleFunc("/setlocks", setLocks)
-	_, err = os.Stat(exedir + "pikari.js")
-	if os.IsNotExist(err) {
-		createPikariJs()
-	}
+	createPikariJs()
 	rootfs := http.FileServer(http.Dir(exedir))
 	http.Handle("/pikari.js", rootfs)
 	fmt.Println("Serving " + appdir + " to " + addr)
@@ -155,12 +161,37 @@ func main() {
 }
 
 func createPikariJs() {
+	_, err := os.Stat(exedir + "pikari.js")
+	if err == nil {
+		return
+	}
 	file, err := os.Create(exedir + "pikari.js")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 	file.WriteString(pikari)
+	file.Close()
+}
+
+func readConfig() {
+	createPikariToml()
+	if _, err := toml.DecodeFile("pikari.toml", &config); err != nil {
+		fmt.Println(err)
+		log.Fatal(err)
+	}
+}
+
+func createPikariToml() {
+	if _, err := os.Stat(exedir + "pikari.toml"); err == nil {
+		return
+	}
+	file, err := os.Create(exedir + "pikari.toml")
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	file.WriteString(tomlconfig)
 	file.Close()
 }
 

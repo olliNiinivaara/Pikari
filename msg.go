@@ -17,7 +17,7 @@ func transmitMessage(message *wsdata, lock bool) {
 	}
 
 	if lock {
-	  mutex.Lock()
+		mutex.Lock()
 		defer mutex.Unlock()
 	}
 	if len(receivers) == 0 {
@@ -30,7 +30,7 @@ func transmitMessage(message *wsdata, lock bool) {
 		return
 	}
 	for _, receivername := range receivers {
-		if receiver, ok := users[receivername]; ok {
+		if receiver, ok := users[" <🏆> "+receivername]; ok {
 			err := receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse)
 			if err != nil {
 				removeUser(receiver, false)

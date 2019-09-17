@@ -75,3 +75,9 @@ func getUser(uid string, pw string) *user {
 	}
 	return u
 }
+
+func getUsername(uid string) string {
+	name := []rune(uid)
+	name = name[5:len(name)]
+	return string(name)
+}
