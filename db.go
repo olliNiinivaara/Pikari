@@ -33,7 +33,7 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - setLocks parsing error: " + err.Error())
 		w.Write([]byte(`{"error": "invalid setLocks request"}`))
 	} else {
-		var theuser = getUser(request.User, request.Password)
+		var theuser = getUser(" <🏆> "+request.User, request.Password)
 		if theuser == nil {
 			w.Write([]byte(`{"error": "No credentials"}`))
 		} else {

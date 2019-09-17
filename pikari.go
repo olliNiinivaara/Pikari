@@ -47,6 +47,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - user name missing in web socket handshake")
 		return
 	}
+	userid = " <🏆> " + userid
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
