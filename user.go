@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"strconv"
@@ -10,8 +11,9 @@ import (
 )
 
 type user struct {
-	id   string
-	conn *websocket.Conn
+	id    string
+	conn  *websocket.Conn
+	since time.Time
 }
 
 var users = make(map[string]*user)
@@ -38,6 +40,7 @@ func removeUser(u *user, lock bool) {
 	delete(users, u.id)
 	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+	transmitMessage(&wsdata{"server", "", []string{}, "sign", getUsername(u.id)}, false)
 	fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
 }
 
@@ -80,4 +83,17 @@ func getUsername(uid string) string {
 	name := []rune(uid)
 	name = name[5:len(name)]
 	return string(name)
+}
+
+func getUsers() string {
+	var userstring bytes.Buffer
+	userstring.WriteString("{")
+	for _, u := range users {
+		if !wasUserdead(u) {
+			userstring.WriteString("\"" + getUsername(u.id) + "\":" + strconv.FormatInt(u.since.Unix(), 10) + ",")
+		}
+	}
+	userstring.Truncate(userstring.Len() - 1)
+	userstring.WriteString("}")
+	return userstring.String()
 }

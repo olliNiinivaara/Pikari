@@ -9,7 +9,6 @@ import (
 
 func transmitMessage(message *wsdata, lock bool) {
 	var receivers = message.Receivers
-	message.Password = ""
 	message.Receivers = []string{}
 	jsonresponse, err := json.Marshal(message)
 	if err != nil {

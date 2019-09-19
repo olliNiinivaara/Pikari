@@ -46,6 +46,7 @@ Pikari.mylocks = []
  */
 Pikari.locks = {}
 
+Pikari.users = new Map()
 
 Pikari.clean = function(str) {
   return String(str).trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -87,6 +88,10 @@ Pikari.addMessageListener = function(handler) {
 
 Pikari.addLockListener = function(handler) {
   Pikari._locklisteners.push(handler)
+}
+
+Pikari.addUserListener = function(handler) {
+  Pikari._userlisteners.push(handler)
 }
 
 Pikari.log = function(event) {
@@ -165,6 +170,7 @@ Pikari._stoplisteners = []
 Pikari._locklisteners = []
 Pikari._changelisteners = []
 Pikari._messagelisteners = []
+Pikari._userlisteners = []
 
 Pikari._reportError = function(error) {
   error = "Pikari client error - " + error
@@ -181,7 +187,8 @@ Pikari._sendToServer = function(messagetype, message) {
 
 Pikari._handleStart = function(d) {
   const startdata = JSON.parse(d.message)
-  Object.entries(startdata).forEach(([field, data]) => { Pikari.data.set(field, data) })
+  Object.entries( JSON.parse(startdata.Db)).forEach(([field, data]) => { Pikari.data.set(field, data) })
+  Object.entries( JSON.parse(startdata.Users)).forEach(([name, since]) => { Pikari.users.set(name, new Date(since*1000)) })
   for(let l of Pikari._startlisteners) l()
 }
 
@@ -204,6 +211,13 @@ Pikari._handleLocking = function(d) {
   for(let l of Pikari._locklisteners) l(d.sender)
 }
 
+Pikari._handleUser = function(d) {
+  if (d.message === Pikari.user) return
+  if (d.password === "in") Pikari.users.set(d.message, new Date())
+  else Pikari.users.delete(d.message)
+  for(let l of Pikari._userlisteners) l(d.message, d.password === "in")
+}
+
 Pikari._startWebSocket = function() {
   Pikari._ws = new WebSocket("ws://"+document.location.host+"/ws?user="+Pikari.user)
 
@@ -224,6 +238,7 @@ Pikari._startWebSocket = function() {
       case "message": { for(let l of Pikari._messagelisteners) l(d.sender, d.message); break }
       case "lock":  { Pikari._handleLocking(d); break }      
       case "change": { Pikari._handleChange(d); break }
+      case "sign": { Pikari._handleUser(d); break }
       default: Pikari._reportError("Unrecognized message type received: " + d.messagetype)
     }
   }

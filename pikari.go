@@ -62,7 +62,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
 		return
 	}
-	theuser := user{id: userid, conn: c}
+	theuser := user{id: userid, conn: c, since: time.Now()}
 	addUser(&theuser)
 	defer removeUser(&theuser, true)
 
@@ -101,8 +101,15 @@ func ws(w http.ResponseWriter, r *http.Request) {
 }
 
 func start(theuser *user) {
+	type startdata struct {
+		Db    string
+		Users string
+	}
 	mutex.Lock()
-	transmitMessage(&wsdata{"server", "", []string{getUsername(theuser.id)}, "start", string(getData())}, false)
+	message := startdata{Db: string(getData()), Users: getUsers()}
+	b, _ := json.Marshal(message)
+	transmitMessage(&wsdata{"server", "in", []string{}, "sign", getUsername(theuser.id)}, false)
+	transmitMessage(&wsdata{"server", "", []string{getUsername(theuser.id)}, "start", string(b)}, false)
 	mutex.Unlock()
 }
 
