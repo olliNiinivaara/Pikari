@@ -10,7 +10,7 @@ import (
 
 type lockrequest struct {
 	User     string   `json:"user"`
-	Password string   `json:"password"`
+	Password string   `json:"w"`
 	Locks    []string `json:"locks"`
 }
 
@@ -33,7 +33,7 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - setLocks parsing error: " + err.Error())
 		w.Write([]byte(`{"error": "invalid setLocks request"}`))
 	} else {
-		var theuser = getUser(" <🏆> "+request.User, request.Password)
+		var theuser = getUser(request.User, request.Password)
 		if theuser == nil {
 			w.Write([]byte(`{"error": "No credentials"}`))
 		} else {
@@ -57,7 +57,7 @@ func tryToAcquireLocks(u *user, r lockrequest) {
 		}
 	}
 	for _, l := range r.Locks {
-		locks[l] = lock{u, getUsername(u.id), time.Now().UTC().Format(time.RFC3339)}
+		locks[l] = lock{u, u.id, time.Now().UTC().Format(time.RFC3339)}
 	}
 }
 
@@ -76,10 +76,13 @@ func removeLocks(u *user, notify bool) {
 
 func notifyLocking(sender *string) {
 	b, _ := json.Marshal(locks)
-	transmitMessage(&wsdata{Sender: getUsername(*sender), Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
+	transmitMessage(&wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
 }
 
 func commit(u *user, newdata *string) {
+	if database == nil {
+		return
+	}
 	var fields map[string]string
 	err := json.Unmarshal([]byte(*newdata), &fields)
 	mutex.Lock()
@@ -111,10 +114,13 @@ func commit(u *user, newdata *string) {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
 	buffer.Reset()
-	transmitMessage(&wsdata{Sender: getUsername(u.id), Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
+	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
 func dropData() {
+	if database == nil {
+		return
+	}
 	mutex.Lock()
 	defer mutex.Unlock()
 	locks = make(map[string]lock)

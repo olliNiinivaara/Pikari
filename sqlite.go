@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -17,6 +18,9 @@ var del *sql.Stmt
 var buffer bytes.Buffer
 
 func openDb(maxPagecount int) {
+	if maxPagecount <= 0 {
+		return
+	}
 	var err error
 	database, err = sql.Open("sqlite3", appdir+"data.db")
 	if err != nil {
@@ -49,6 +53,9 @@ func openDb(maxPagecount int) {
 }
 
 func closeDb() {
+	if database == nil {
+		return
+	}
 	get.Close()
 	set.Close()
 	if _, err := database.Exec("VACUUM;"); err != nil {
@@ -62,6 +69,9 @@ func closeDb() {
 }
 
 func getData() []byte {
+	if database == nil {
+		return []byte("{}")
+	}
 	if buffer.Len() > 0 {
 		return buffer.Bytes()
 	}
@@ -78,7 +88,8 @@ func getData() []byte {
 		if err != nil {
 			log.Fatal(err)
 		}
-		buffer.Write(field)
+		jfield, _ := json.Marshal(string(field))
+		buffer.Write(jfield)
 		buffer.WriteString(`:`)
 		buffer.Write(value)
 		buffer.WriteString(",")
@@ -102,7 +113,7 @@ func update(tx *sql.Tx, field string, value string) bool {
 		_, err = tx.Stmt(set).Exec(field, value)
 	}
 	if err != nil {
-		if config.Autodrop {
+		if config.Autorestart {
 			tx.Rollback()
 			err = dropDb(tx)
 			if err != nil {

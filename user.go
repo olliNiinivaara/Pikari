@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -40,7 +41,7 @@ func removeUser(u *user, lock bool) {
 	delete(users, u.id)
 	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	transmitMessage(&wsdata{"server", "", []string{}, "sign", getUsername(u.id)}, false)
+	transmitMessage(&wsdata{"server", "", []string{}, "sign", u.id}, false)
 	fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
 }
 
@@ -79,18 +80,13 @@ func getUser(uid string, pw string) *user {
 	return u
 }
 
-func getUsername(uid string) string {
-	name := []rune(uid)
-	name = name[5:len(name)]
-	return string(name)
-}
-
 func getUsers() string {
 	var userstring bytes.Buffer
 	userstring.WriteString("{")
 	for _, u := range users {
 		if !wasUserdead(u) {
-			userstring.WriteString("\"" + getUsername(u.id) + "\":" + strconv.FormatInt(u.since.Unix(), 10) + ",")
+			jid, _ := json.Marshal(u.id)
+			userstring.WriteString(string(jid) + ":" + strconv.FormatInt(u.since.Unix(), 10) + ",")
 		}
 	}
 	userstring.Truncate(userstring.Len() - 1)

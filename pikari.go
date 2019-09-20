@@ -1,10 +1,9 @@
 package main
 
 import (
-	"encoding/json"
+	"encoding/base64"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -12,17 +11,13 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/gorilla/websocket"
 )
 
 const tf = "01-02 15:04"
-
-var mutex sync.Mutex
 
 var appdir, exedir, port, password = "", "", 0, ""
 
@@ -31,98 +26,21 @@ var config configuration
 type configuration struct {
 	Port         int
 	Maxpagecount int
-	Autodrop     bool
-}
-
-type wsdata struct {
-	Sender      string   `json:"sender"`
-	Password    string   `json:"password,omitempty"`
-	Receivers   []string `json:"receivers,omitempty"`
-	Messagetype string   `json:"messagetype"`
-	Message     string   `json:"message"`
-}
-
-var upgrader = websocket.Upgrader{}
-
-func favicon(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "image/x-icon")
-	w.Header().Set("Cache-Control", "public, max-age=7776000")
-	io.WriteString(w, "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQEAYAAABPYyMiAAAABmJLR0T///////8JWPfcAAAACXBIWXMAAABIAAAASABGyWs+AAAAF0lEQVRIx2NgGAWjYBSMglEwCkbBSAcACBAAAeaR9cIAAAAASUVORK5CYII=\n\n")
-}
-
-func ws(w http.ResponseWriter, r *http.Request) {
-	userid := r.URL.Query().Get("user")
-	if userid == "" {
-		log.Println("Pikari server error - user name missing in web socket handshake")
-		return
-	}
-	userid = " <🏆> " + userid
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
-		return
-	}
-	theuser := user{id: userid, conn: c, since: time.Now()}
-	addUser(&theuser)
-	defer removeUser(&theuser, true)
-
-	for {
-		_, msg, err := c.ReadMessage()
-		if err != nil {
-			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-				log.Println("Pikari server error - web socket read failed:" + err.Error())
-			}
-			break
-		}
-		request := wsdata{}
-		err = json.Unmarshal(msg, &request)
-		if err != nil {
-			log.Println("Pikari server error - ws parsing error: " + err.Error())
-			break
-		}
-		if !checkUser(&theuser, request.Password) {
-			break
-		}
-		switch request.Messagetype {
-		case "log":
-			log.Println(&request.Message)
-		case "start":
-			start(&theuser)
-		case "message":
-			transmitMessage(&request, true)
-		case "commit":
-			commit(&theuser, &request.Message)
-		case "dropdata":
-			dropData()
-		default:
-			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
-		}
-	}
-}
-
-func start(theuser *user) {
-	type startdata struct {
-		Db    string
-		Users string
-	}
-	mutex.Lock()
-	message := startdata{Db: string(getData()), Users: getUsers()}
-	b, _ := json.Marshal(message)
-	transmitMessage(&wsdata{"server", "in", []string{}, "sign", getUsername(theuser.id)}, false)
-	transmitMessage(&wsdata{"server", "", []string{getUsername(theuser.id)}, "start", string(b)}, false)
-	mutex.Unlock()
+	Autorestart  bool
 }
 
 func main() {
 	_, callerFile, _, _ := runtime.Caller(0)
 	exedir = filepath.Dir(callerFile) + string(filepath.Separator)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
-	flag.StringVar(&password, "password", "", "password for the application")
+	var pw string
+	flag.StringVar(&pw, "password", "", "password for the application")
 	flag.Parse()
 	if len(appdir) == 0 {
 		fmt.Println("Give path to application with appdir parameter, like this: pikari -appdir Nameofmyapplication")
 		os.Exit(1)
 	}
+	password = base64.StdEncoding.EncodeToString([]byte(pw))
 	if !filepath.IsAbs(appdir) {
 		appdir = exedir + appdir + string(filepath.Separator)
 	}
@@ -138,7 +56,7 @@ func main() {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
-	fmt.Println(time.Now().Format(tf) + " Pikari 0.6 starting")
+	fmt.Println(time.Now().Format(tf) + " Pikari 0.7 starting")
 	readConfig()
 	addr := "127.0.0.1:" + strconv.Itoa(config.Port)
 	openDb(config.Maxpagecount)
