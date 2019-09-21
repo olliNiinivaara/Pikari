@@ -1,4 +1,2 @@
-*
-!bin
-!*.go
-!README.md
+*.js
+*.toml
