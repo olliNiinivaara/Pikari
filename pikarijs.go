@@ -7,107 +7,227 @@ const pikari = `
  * @author Olli Niinivaara
  * @copyright Olli Niinivaara 2019
  * @license MIT
- * @version 0.7
+ * @version 0.8
  */
 
-
 /** @namespace
- * @description the global Pikari object. To initialize, add listeners and call start.
+ * @description the global Pikari object. To initialize, add listeners and call {@link Pikari.start}.
  * @global
- * @example Pikari.addCommitListener(function(description, sender, fields) { do something })
- * Pikari.start("John")
+ * 
 */
 window.Pikari = new Object()
 
-
 /** 
- *  @description Local copy of the whole database. Changes committed to database by any user are automatically updated to it.
- *  @example Pikari.data["<somefield>"] = "some data"
+ * @description Local copy of the database.
+ * <br>Keys identify fields and values are field values.
+ * <br>Keys should be strings but values can be any objects, even nested.
+ * <br>If you want to delete a field from database, set it's value to null.
+ * <br>Changes to fields committed by any user are automatically updated.
+ *  @type {Map<string, object>}
+ *  @example
+ *  if Pikari.setLocks("somefield") {
+ *    Pikari.data.set("somefield", "some value")
+ *    Pikari.commit()
+ *  }
  */
 Pikari.data = new Map()
 
 /** 
  * @description Names of locks that are currently held by the current user.
- * At least one lock must be held before commit can be called.
+ * <br>Locks can be acquired with {@link Pikari.setLocks}.
+ * <br>At least one lock must be held before commit can be called.
+ * @type {string[]}
  */
 Pikari.mylocks = []
-
 
 /**
  @typedef Pikari.Lock
  @type {Object}
- @property {string} lockedby {@link Pikari.userdata} identifier of current lock owner 
+ @property {string} lockedby current lock owner 
  @property {string} lockedsince The start time of locking
  */
 /** 
- * @description Locks that are held.
- * Object's property names (keys) identify the locks and properties are of type {@link Pikari.Lock}
- * @example console.log(Object.keys(Pikari.mylocks))
+ * @description Locks that are currently held.
+ * <br>Object's property names (keys) identify the locks and properties are of type {@link Pikari.Lock}.
+ * <br>Changes to locks can be listened with {@link Pikari.addLockListener}.
+ * @type {Object.<string, Pikari.Lock>}
  */
 Pikari.locks = {}
 
+/** 
+ * @description Users currenty online.
+ * <br>Keys identify users and values tell the times when users became online.
+ * <br>Changes to user presence can be listened with {@link Pikari.addUserListener}.
+ * @type {Map<string,Date>}
+ */
 Pikari.users = new Map()
 
+/** 
+ * @description Helper function to clean a string so that it can be safely used as innerHTML.
+ * @param {string} str - the string to be cleaned
+ * @return {string} the cleaned version.
+ */
 Pikari.clean = function(str) {
   return String(str).trim().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-
+/** 
+ * @description Helper function to generate a number that is unique enough for prototyping purposes.
+ * @return {number} a random integer that is hopefully unique.
+ */
 Pikari.generateKey = function() {
   return Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)
 }
 
-
 /** 
- * @description Name of the user.
+ * @description Name of the user. Automatically generated if not explicitly given in {@link Pikari.start}.
+ * Maximum length of a name is 200 letters.
+ * @type {string}
  */
 Pikari.user = "Anon-"+ Pikari.generateKey()
 
+/** 
+ * @description Connects the Pikari client to the Pikari server with given name and password (both optional).
+ * If a user with same name is already connected, existing user will be immediately disconnected.
+ * @param {string} user - user name; will be truncated to 200 letters
+ * @param {string} password - if a global password parameter was given when server was started, this must match it
+ */
 Pikari.start = function(user, password) {
   if (user) Pikari.user = user
+  Pikari.user = Pikari.user.substring(0, 200)
   if (!password) password = ""
   Pikari._password = btoa(String(password))
   Pikari._startWebSocket()
 }
 
+/**
+ * @callback startCallback
+ * @memberOf Pikari
+ * @description Triggered once, when connection to server is established and all data is available.
+ */
+/**
+ * @description Add handler for the start event.
+ * @param {startCallback} handler - {@link Pikari.startCallback}
+ */
 Pikari.addStartListener = function(handler) {
   Pikari._startlisteners.push(handler)
 }
 
+/**
+ * @callback stopCallback
+ * @memberOf Pikari
+ * @description Triggered at most once, only if connection to server is lost (usually might happen when server is closed).
+ */
+/**
+ * @description Add handler for the stop event.
+ * @param {stopCallback} handler - {@link Pikari.stopCallback}
+ */
 Pikari.addStopListener = function(handler) {
   Pikari._stoplisteners.push(handler)
 }
 
+/**
+ * @callback changeCallback
+ * @memberOf Pikari
+ * @description <pre>
+ * Triggered whenever:
+ * 1) any user commits data (see {@link Pikari.commit}) and then changer's name is set.
+ * 2) the local user rollbacks (see {@link Pikari.rollback}) and then changer's name is null.
+ * 3) Database is dropped (see {@link Pikari.dropData}) and then the changer's name is an empty string ("").</pre>
+ * @param {string[]} changedfields - an array of changed field names
+ * @param {string} changer - changer's name, null or ""
+ */
+/**
+ * @description Add handler for change events.
+ * @param {changeCallback} handler - {@link Pikari.changeCallback}
+ */
 Pikari.addChangeListener = function(handler) {
   Pikari._changelisteners.push(handler)
 }
 
+/**
+ * @callback messageCallback
+ * @memberOf Pikari
+ * @description Triggered when a user sends a message.
+ * @param {string} sender - sender of the message
+ * @param {string} message - the message itself
+ */
+/**
+ * @description Add handler for messages sent by other users.
+ * @param {messageCallback} handler - {@link Pikari.messageCallback}
+ */
 Pikari.addMessageListener = function(handler) {
   Pikari._messagelisteners.push(handler)
 }
 
+/**
+ * @callback lockCallback
+ * @memberOf Pikari
+ * @description Triggered when locks are acquired or released.
+ * <br>Note: also local {@link Pikari.setLocks} calls will trigger the lockCallback.
+ */
+/**
+ * @description Add handler for changes in lock ownerships.
+ * @param {lockCallback} handler - {@link Pikari.lockCallback}
+ */
 Pikari.addLockListener = function(handler) {
   Pikari._locklisteners.push(handler)
 }
 
+/**
+ * @callback userCallback
+ * @memberOf Pikari
+ * @description  Triggered when a user logs in or disconnects.
+ * @param {string} user - the user that logged in or disconnected
+ * @param {boolean} login - true iff the user logged in
+ */
+/**
+ * @description Add handler for changes in on-line users.
+ * @param {userCallback} handler - {@link Pikari.userCallback}
+ */
 Pikari.addUserListener = function(handler) {
   Pikari._userlisteners.push(handler)
 }
 
+/**
+ * @description Send some string to be added to the server-side log.
+ * @param {string} event - the string to be added; truncated to 10000 letters.
+ */
 Pikari.log = function(event) {
+  if (typeof event !== "string") return
+  event = event.substring(0, 10000)
   Pikari._sendToServer("log", event)
 }
 
+/**
+ * @description Send a message to other on-line users.
+ * @param message - the message to send
+ * @param {string|string[]} - a receiver or array of receivers. If missing or empty, the message will be sent to all users.
+ */
 Pikari.sendMessage = function(message, receivers) {
   if (!receivers) receivers = []
   if (!Array.isArray(receivers)) receivers = [receivers]
   Pikari._ws.send(JSON.stringify({"sender": Pikari.user, "w":Pikari._password, "receivers": receivers, "messagetype": "message", "message": message}))
 }
 
+/**
+ * @description A helper function to get data field names as an array.
+ * @return {string[]} Array of field names.
+ */
 Pikari.getFields = function() {
   return Array.from(Pikari.data.keys())
 }
 
+/**
+ * @description Acquire locks to data before making changes and committing ("start a transaction").
+ * <br>Locks prevent concurrent modification by multiple users.
+ * <br>The basic procedure is to use names-of-fields-to-be-changed as lock names.
+ * <br>If lock setting fails (because required locks were already locked by other user(s)), all currently held locks by the user are released (to prevent dead-locks).
+ * <br>Note: Remember to await for the return value, this is an async function.
+ * @async
+ * @param {string[]} locks - names of the locks to lock. If locks is missing or empty, tries to acquire all existing field names.
+ * @return {boolean} true if locking was successful. False if user lost all locks and is not eligible to {@link Pikari.commit}.
+ */
 Pikari.setLocks = async function(locks) {
   if (!locks || (Array.isArray(locks) && locks.length == 0)) locks = Pikari.getFields()
   if (!Array.isArray(locks)) locks  = [String(locks)]
@@ -130,6 +250,12 @@ Pikari.setLocks = async function(locks) {
   return true
 }
 
+/**
+ * @description Commit changes to data fields.
+ * <br>Only fields that are changed will be transferred to server.
+ * <br>Will release all locks.
+ * @throws if no locks are held ("no transaction is active") an error will be thrown
+ */
 Pikari.commit = function() {
   if (Pikari.mylocks.length == 0) throw("No transaction to commit")
   let newdata = {}
@@ -141,28 +267,30 @@ Pikari.commit = function() {
   Pikari._sendToServer("commit", newdata)
 }
 
+/**
+ * @description Rollback any changes to data fields.
+ * <br>Will cause a local {@link Pikari.changeCallback} with a list of rolled-back fields and changer parameter set to null.
+ * @throws if no locks are held ("no transaction is active") an error will be thrown
+ */
 Pikari.rollback = function() {
-  //TODO: report only rollbacked fields, NOT all fields
-  if (Pikari.mylocks.length == 0) throw("No transaction to rollback")
-  Pikari.data = new Map()
-  Pikari._oldData.forEach(v, f => { Pikari.data.set(f, JSON.parse(v)) })
-  const allfields = Pikari.getFields()
-  for(let l of Pikari._changelisteners) l("rollback", allfields)
+  if (Pikari.mylocks.length == 0) throw("No transaction to rollback")  
+  let changedfields = []
+  Pikari._oldData.forEach((oldvalue, field) => {
+    const modifiedvalue = JSON.stringify(Pikari.data.get(field))
+    if (oldvalue != modifiedvalue) changedfields.push(field)
+    Pikari._oldData.set(field, JSON.parse(oldvalue))
+  })
+  Pikari.data = Pikari._oldData
   fetch("/setlocks", {method: "post", body: JSON.stringify({"user": Pikari.user, "w": Pikari.password, "locks": []})})
+  for(let l of Pikari._changelisteners) l(changedfields, null)
 }
 
+/**
+ * @description A drastic operation to immediately remove all data from server.
+ */
 Pikari.dropData = function() {
   Pikari._sendToServer("dropdata")
 }
-
-Pikari.setUserdata = function(value) {
-  Pikari.data.set(" <🏆> "+Pikari.user, value)
-}
-
-Pikari.getUserdata = function() {
-  return Pikari.data.get(" <🏆> "+Pikari.user)
-}
-
 
 //private stuff-------------------------------------------
 

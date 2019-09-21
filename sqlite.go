@@ -115,10 +115,8 @@ func update(tx *sql.Tx, field string, value string) bool {
 	if err != nil {
 		if config.Autorestart {
 			tx.Rollback()
-			err = dropDb(tx)
-			if err != nil {
-				log.Fatal(err)
-			}
+			mutex.Unlock()
+			dropData()
 			return false
 		}
 		log.Fatal(err)

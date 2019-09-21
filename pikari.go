@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const tf = "01-02 15:04"
@@ -30,6 +31,7 @@ type configuration struct {
 }
 
 func main() {
+	icon, _ = base64.StdEncoding.DecodeString(icon64)
 	_, callerFile, _, _ := runtime.Caller(0)
 	exedir = filepath.Dir(callerFile) + string(filepath.Separator)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
@@ -49,14 +51,13 @@ func main() {
 		fmt.Println("Application directory not found: " + appdir)
 		os.Exit(1)
 	}
-	logfile, err := os.OpenFile(appdir+"pikari.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	defer logfile.Close()
-	log.SetOutput(logfile)
-	fmt.Println(time.Now().Format(tf) + " Pikari 0.7 starting")
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   appdir + "pikari.log",
+		MaxSize:    1,
+		MaxBackups: 3,
+		LocalTime:  true,
+	})
+	fmt.Println(time.Now().Format(tf) + " Pikari 0.8 starting")
 	readConfig()
 	addr := "127.0.0.1:" + strconv.Itoa(config.Port)
 	openDb(config.Maxpagecount)

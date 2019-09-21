@@ -140,6 +140,6 @@ func dropData() {
 	}
 	buffer.Reset()
 	buffer.WriteString("{}")
-	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
-	transmitMessage(&wsdata{Sender: "server", Receivers: []string{}, Messagetype: "change", Message: "{}"}, false)
+	transmitMessage(&wsdata{Sender: "", Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
+	transmitMessage(&wsdata{Sender: "", Receivers: []string{}, Messagetype: "change", Message: "{}"}, false)
 }
