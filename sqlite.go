@@ -116,7 +116,7 @@ func update(tx *sql.Tx, field string, value string) bool {
 		if config.Autorestart {
 			tx.Rollback()
 			mutex.Unlock()
-			dropData()
+			dropData("server autorestart")
 			return false
 		}
 		log.Fatal(err)

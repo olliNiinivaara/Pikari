@@ -117,7 +117,7 @@ func commit(u *user, newdata *string) {
 	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
-func dropData() {
+func dropData(username string) {
 	if database == nil {
 		return
 	}
@@ -140,6 +140,6 @@ func dropData() {
 	}
 	buffer.Reset()
 	buffer.WriteString("{}")
-	transmitMessage(&wsdata{Sender: "", Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
-	transmitMessage(&wsdata{Sender: "", Receivers: []string{}, Messagetype: "change", Message: "{}"}, false)
+	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
+	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"}, false)
 }

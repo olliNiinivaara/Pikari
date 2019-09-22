@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,25 +38,32 @@ func main() {
 	var pw string
 	flag.StringVar(&pw, "password", "", "password for the application")
 	flag.Parse()
+
+	password = base64.StdEncoding.EncodeToString([]byte(pw))
+
 	if len(appdir) == 0 {
 		fmt.Println("Give path to application with appdir parameter, like this: pikari -appdir Nameofmyapplication")
 		os.Exit(1)
 	}
-	password = base64.StdEncoding.EncodeToString([]byte(pw))
+	if !strings.HasSuffix(appdir, string(filepath.Separator)) {
+		appdir += string(filepath.Separator)
+	}
 	if !filepath.IsAbs(appdir) {
-		appdir = exedir + appdir + string(filepath.Separator)
+		appdir = exedir + appdir
 	}
 	_, err := os.Stat(appdir)
 	if os.IsNotExist(err) {
 		fmt.Println("Application directory not found: " + appdir)
 		os.Exit(1)
 	}
+
 	log.SetOutput(&lumberjack.Logger{
 		Filename:   appdir + "pikari.log",
 		MaxSize:    1,
 		MaxBackups: 3,
 		LocalTime:  true,
 	})
+
 	fmt.Println("Pikari 0.8 starting at " + exedir)
 	readConfig()
 	addr := "127.0.0.1:" + strconv.Itoa(config.Port)
@@ -73,6 +81,7 @@ func main() {
 	fmt.Println("Send SIGINT (Ctrl+C) to quit")
 	fmt.Print(time.Now().Format(tf) + " users: 0" + " ")
 	log.Println("---")
+
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {

@@ -81,7 +81,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "commit":
 			commit(&theuser, &request.Message)
 		case "dropdata":
-			dropData()
+			dropData(theuser.id)
 		default:
 			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
 		}
