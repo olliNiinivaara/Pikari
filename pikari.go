@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -32,8 +31,8 @@ type configuration struct {
 
 func main() {
 	icon, _ = base64.StdEncoding.DecodeString(icon64)
-	_, callerFile, _, _ := runtime.Caller(0)
-	exedir = filepath.Dir(callerFile) + string(filepath.Separator)
+	exedir, _ := os.Getwd()
+	exedir += string(filepath.Separator)
 	flag.StringVar(&appdir, "appdir", "", "path to application, absolute or relative to "+exedir)
 	var pw string
 	flag.StringVar(&pw, "password", "", "password for the application")
@@ -57,7 +56,7 @@ func main() {
 		MaxBackups: 3,
 		LocalTime:  true,
 	})
-	fmt.Println(time.Now().Format(tf) + " Pikari 0.8 starting")
+	fmt.Println("Pikari 0.8 starting at " + exedir)
 	readConfig()
 	addr := "127.0.0.1:" + strconv.Itoa(config.Port)
 	openDb(config.Maxpagecount)
@@ -102,7 +101,7 @@ func createPikariJs() {
 
 func readConfig() {
 	createPikariToml()
-	if _, err := toml.DecodeFile("pikari.toml", &config); err != nil {
+	if _, err := toml.DecodeFile(exedir+"pikari.toml", &config); err != nil {
 		fmt.Println(err)
 		log.Fatal(err)
 	}
