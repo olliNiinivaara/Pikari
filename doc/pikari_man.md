@@ -29,7 +29,7 @@ Defines the application directory for the application to run. The directory shou
 The appdir can be either relative to *cwd* or absolute.
 
 \[-password _password_\]  
-Optional parameter that defines a password string that must be present in every call to server. The client can set the password at [pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
+Optional parameter that defines a password string that must be present in every call to server. The client can set the password at [Pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
 
 Note that the password is not encrypted in flight; therefore you MUST use HTTPS/WSS reverse proxy to gain any real protection in the Internet.
 </p>
@@ -66,7 +66,7 @@ note: Assuming sqlite default page size of 4096 bytes, the default value of 1000
 
 note: If your prototype is not using a database, set maxpagecount to 0 get rid of it.
 
-note: If database autorestarts itself, the *drop* message's sender user name will be *server autorestart*.
+note: If database autorestarts itself, the *drop* message's sender (and therefore changeCallback's changer) will be *server autorestart*.
 
 NOTES
 ===========
@@ -95,7 +95,7 @@ in linux, serves an application at directory _./_Hellopikari_/_ with *pikari*, *
 
 C:\pikari -appdir C:\\_Hellopikari -password pillowHikari
 
-in windows, starts pikari at *C:\\pikari* and serves application at absolute path _C:\\_Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
+in windows, starts *C:\\pikari* and serves application at absolute path _C:\\Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
 
 AUTHOR
 ======

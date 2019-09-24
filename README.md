@@ -10,16 +10,17 @@
 
 1. Download the Pikari server:
    1. [linux/amd64](https://github.com/olliNiinivaara/Pikari/raw/master/bin/linux/pikari)
-   * note: If your OS/architecture is not pre-built, you can build it yourself with [go](https://golang.org/dl/)
-2. Try out Pikari by following [Hello Pikari's instructions](http://github.com/olliNiinivaara/Hellopikari)
-3. Skim through the [server](https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_man.md) and [client](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html) docs
-4. Get some more [examples](#examples) and study them
-5. Start writing your own prototypes!
+   * note: If Pikari is not pre-built for your OS/architecture, you can build it yourself with [go](https://golang.org/dl/)
+1. Give the program execution permissions
+1. Try out Pikari by following [Hello Pikari's instructions](http://github.com/olliNiinivaara/Hellopikari)
+1. Skim through the [server](https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_man.md) and [client](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html) docs
+1. Get some more [examples](#examples) and study them
+1. Start writing your own prototypes!
 
 ## <a name="examples"></a>Examples
 
-* [Hello Pikari](http://github.com/olliNiinivaara/Hellopikari/): Simplest possible example
-* [Text](http://github.com/olliNiinivaara/Text/): Synced editing of private and shared data
-* [List](http://github.com/olliNiinivaara/List/): Master-detail tables of data, CRUD and calculated fields
-* [TodoMVC](http://github.com/olliNiinivaara/TodoMVC/): The classic
-* [Chat](http://github.com/olliNiinivaara/Chat/): Messaging between users
+* [Hellopikari](http://github.com/olliNiinivaara/Hellopikari/): Simplest possible example
+* [Text-Pikari](http://github.com/olliNiinivaara/Text-Pikari/): Synced editing of private and shared data
+* [List-Pikari](http://github.com/olliNiinivaara/List-Pikari/): Master-detail tables of data, CRUD and calculated fields
+* [TodoMVC-Pikari](http://github.com/olliNiinivaara/TodoMVC-Pikari/): The classic
+* [Chat-Pikari](http://github.com/olliNiinivaara/Chat-Pikari/): Messaging between users
