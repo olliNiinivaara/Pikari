@@ -7,7 +7,7 @@ NAME
 
 SYNOPSIS
 ========
-**pikari** **-appdir** _directorypath_] \[**-password** _password_\]
+**pikari** **-appdir** _directorypath_ \[**-password** _password_\]
 
 DESCRIPTION
 ===========
@@ -29,9 +29,9 @@ Defines the application directory for the application to run. The directory shou
 The appdir can be either relative to *cwd* or absolute.
 
 \[-password _password_\]  
-  Optional parameter that defines a password string that must be present in every call to server. The client can set the password at [pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
+Optional parameter that defines a password string that must be present in every call to server. The client can set the password at [pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
 
-    Note that the password is not encrypted in flight; therefore you MUST use HTTPS/WSS reverse proxy to gain any real protection in the Internet.
+Note that the password is not encrypted in flight; therefore you MUST use HTTPS/WSS reverse proxy to gain any real protection in the Internet.
 </p>
 
 
@@ -40,33 +40,33 @@ FILES
 
 pikari | pikari.exe
 
-    The program itself. In linux it is named *pikari*.
+The program itself. In linux it is named *pikari*.
 
 *\[cwd/\]pikari.js*
 
-    The front-end API implementation, see [this](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
+The front-end API implementation, see [this](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 
 *\[appdir/\]index.html*
 
-    The default file to serve for an application (you'll write it!)
+The default file to serve for an application (you'll write it!)
 
 *\[appdir/\]data.db*
 
-    The sqlite3 database for an application.
+The sqlite3 database for an application.
 
 *\[appdir/\]pikari.log*
 
-    Logs for an application. This is a rolling log with at most 2 backup files and 1 megabyte of log data.
+Logs for an application. This is a rolling log with at most 2 backup files and 1 megabyte of log data.
 
 *\[cwd/\]pikari.toml*
 
-    The configuration file. The available three options are described in it.
+The configuration file. The available three options are described in it.
    
-    note: Assuming sqlite default page size of 4096 bytes, the default value of 10000 for maxpagecount sets the maximum database size limit to around 40 megabytes.
+note: Assuming sqlite default page size of 4096 bytes, the default value of 10000 for maxpagecount sets the maximum database size limit to around 40 megabytes.
 
-    note: If your prototype is not using a database, set maxpagecount to 0 get rid of it.
+note: If your prototype is not using a database, set maxpagecount to 0 get rid of it.
 
-    note: If database autorestarts itself, the *drop* message's sender user name will be *server autorestart*.
+note: If database autorestarts itself, the *drop* message's sender user name will be *server autorestart*.
 
 NOTES
 ===========
@@ -88,14 +88,14 @@ See GitHub Issues: <https://github.com/olliNiinivaara/Pikari/issues>
 EXAMPLES
 ========
 
-**./pikari** **-appdir** _Hellopikari_
+./pikari -appdir Hellopikari
 
-    in linux, serves an application at directory _./_Hellopikari_/_ with *pikari*, *pikari.js* and *pikari.toml* at *cwd*.
+in linux, serves an application at directory _./_Hellopikari_/_ with *pikari*, *pikari.js* and *pikari.toml* at *cwd*.
 
 
-**C:\pikari** **-appdir** _C:\\_Hellopikari_ **-password** _pillowHikari_
+C:\pikari -appdir C:\\_Hellopikari -password pillowHikari
 
-   in windows, starts pikari at *C:\\pikari* and serves application at absolute path _C:\\_Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
+in windows, starts pikari at *C:\\pikari* and serves application at absolute path _C:\\_Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
 
 AUTHOR
 ======
