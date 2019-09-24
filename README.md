@@ -9,10 +9,10 @@
 ## Quick start
 
 1. Download the Pikari server:
-   1. [linux/amd64](http://github.com/olliNiinivaara/Pikari/bin/linux/pikari)
+   1. [linux/amd64](https://github.com/olliNiinivaara/Pikari/raw/master/bin/linux/pikari)
    * note: If your OS/architecture is not pre-built, you can build it yourself with [go](https://golang.org/dl/)
 2. Try out Pikari by following [Hello Pikari's instructions](http://github.com/olliNiinivaara/Hellopikari)
-3. Skim through the [server](https://verkkoyhteys.fi/pikari.html) and [client](https://verkkoyhteys.fi/pikari.jsdoc) docs
+3. Skim through the [server](https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_man.md) and [client](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html) docs
 4. Get some more [examples](#examples) and study them
 5. Start writing your own prototypes!
 

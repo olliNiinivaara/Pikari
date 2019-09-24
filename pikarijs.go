@@ -35,16 +35,16 @@ Pikari.data = new Map()
 * @description Describes the reason for data change in {@link {changeCallback}}
 * @typedef {Object} EVENT
 * @memberOf Pikari
-* @property {string} start - Connection with server is established (see {@link Pikari.start}) or server restarted itself
-* @property {string} commit - Someone committed data (see {@link Pikari.commit})
-* @property {string} rollback - The local user rollbacked (see {@link Pikari.rollback})
-* @property {string} drop - Someone dropped all data (see {@link Pikari.dropData})
+* @property {string} START - Connection with server is established (see {@link Pikari.start}) or server restarted itself
+* @property {string} COMMIT - Someone committed data (see {@link Pikari.commit})
+* @property {string} ROLLBACK - The local user rollbacked (see {@link Pikari.rollback})
+* @property {string} DROP - Someone (see {@link Pikari.dropData}) or server (changer == "server autorestart") dropped all data 
 */
 Pikari.EVENT = {
- START: "start",
- COMMIT: "commit",
- ROLLBACK: "rollback",
- DROP: "drop"
+ START: "START",
+ COMMIT: "COMMIT",
+ ROLLBACK: "ROLLBACK",
+ DROP: "DROP"
 }
 Object.freeze(Pikari.EVENT)
 
@@ -284,7 +284,7 @@ Pikari.commit = function() {
 
 /**
 * @description Rollback any changes to data fields.
-* <br>Will cause a local {@link Pikari.changeCallback} with a list of rolled-back fields and changer parameter set to null.
+* <br>Will cause a local {@link Pikari.changeCallback} with a list of rolled-back (modified) fields.
 * @throws if no locks are held ("no transaction is active") an error will be thrown
 */
 Pikari.rollback = function() {
