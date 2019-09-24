@@ -10,7 +10,7 @@ const pikari = `/**
 */
 
 /** @namespace
-* @description the global Pikari object. To initialize, add listeners and call {@link Pikari.start}.
+* @description The global Pikari object. To initialize, add listeners and call {@link Pikari.start}.
 * @global
 * 
 */
