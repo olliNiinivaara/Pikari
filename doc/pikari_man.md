@@ -12,11 +12,11 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-pikari is a web server and database for the Pikari rapid web application prototyping framework.
-It serves files of application directory given as command line parameter to 127.0.0.1.
-Above all it serves as an end-point to *pikari.js* API, documented [here](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html).
+pikari is a web server and a database for the Pikari rapid web application prototyping framework.
+It serves as an end-point to *pikari.js* API, documented [here](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html).
+It also serves all static files from a given directory path to IP address 127.0.0.1.
 
-At start, pikari looks for configuration file *pikari.toml* and the front-end API implementation *pikari.js* files at the *current working directory* (*cwd*).
+At start, pikari looks for *pikari.toml* and *pikari.js* at the *current working directory* (*cwd*).
 If a file is not found, it will recreate it.
 This means that you can use different, modified *pikari.toml* or *pikari.js* for different applications by starting them at different *cwd*.
 
@@ -25,26 +25,26 @@ Options
 
 -appdir _directorypath_
 
-Defines the application directory for the application to run. The directory should contain *index.html* file which is served as default.    
-The appdir can be either relative to *cwd* or absolute.
+Defines the directory to serve. The directory should contain *index.html* file which is served as default.    
+The appdir can be either relative to *cwd* or absolute path.
 
 \[-password _password_\]  
-Optional parameter that defines a password string that must be present in every call to server. The client can set the password at [Pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
+Optional password that clients must know. The client can set the password at [Pikari.start()](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html#.start).
 
-Note that the password is not encrypted in flight; therefore you MUST use HTTPS/WSS reverse proxy to gain any real protection in the Internet.
+Note that the password is not encrypted in flight; therefore you MUST use HTTPS/WSS reverse proxy to keep it secret.
 </p>
 
 
 FILES
 =====
 
-pikari | pikari.exe
+pikari
 
-The program itself. In linux it is named *pikari*.
+The program itself.
 
 *\[cwd/\]pikari.js*
 
-The front-end API implementation, see [this](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
+[The front-end API implementation](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 
 *\[appdir/\]index.html*
 
@@ -60,7 +60,7 @@ Logs for an application. This is a rolling log with at most 2 backup files and 1
 
 *\[cwd/\]pikari.toml*
 
-The configuration file. The available three options are described in it.
+The configuration file. The available options are described in it.
    
 note: Assuming sqlite default page size of 4096 bytes, the default value of 10000 for maxpagecount sets the maximum database size limit to around 40 megabytes.
 
