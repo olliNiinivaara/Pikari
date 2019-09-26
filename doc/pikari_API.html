@@ -14,12 +14,6 @@
 
 <div id="main">
 
-    <h1 class="page-title">Pikari API</h1>
-
-    
-
-
-
 
 <section>
 
@@ -34,7 +28,7 @@
     <div class="container-overview">
     
         
-            <div class="description">the global Pikari object. To initialize, add listeners and call <a href="#.start">Pikari.start</a>.</div>
+            <div class="description">The global Pikari object. To initialize, add listeners and call <a href="Pikari.html#.start">Pikari.start</a>.</div>
         
 
         
@@ -176,15 +170,15 @@
 
         
             
-<hr><h4 class="name" id=".locks"><span class="type-signature">(static) </span>locks<span class="type-signature"> :Object.&lt;string, <a href="#.Lock">Pikari.Lock</a>></span></h4>
+<hr><h4 class="name" id=".locks"><span class="type-signature">(static) </span>locks<span class="type-signature"> :Object.&lt;string, <a href="Pikari.html#.Lock">Pikari.Lock</a>></span></h4>
 
 
 
 
 <div class="description">
     Locks that are currently held.
-<br>Object's property names (keys) identify the locks and properties are of type <a href="#.Lock">Pikari.Lock</a>.
-<br>Changes to locks can be listened with <a href="#.addLockListener">Pikari.addLockListener</a>.
+<br>Object's property names (keys) identify the locks and properties are of type <a href="Pikari.html#.Lock">Pikari.Lock</a>.
+<br>Changes to locks can be listened with <a href="Pikari.html#.addLockListener">Pikari.addLockListener</a>.
 </div>
 
 
@@ -193,7 +187,7 @@
     <ul>
         <li>
             
-<span class="param-type">Object.&lt;string, <a href="#.Lock">Pikari.Lock</a>></span>
+<span class="param-type">Object.&lt;string, <a href="Pikari.html#.Lock">Pikari.Lock</a>></span>
 
 
         </li>
@@ -252,7 +246,7 @@
 
 <div class="description">
     Names of locks that are currently held by the current user.
-<br>Locks can be acquired with <a href="#.setLocks">Pikari.setLocks</a>.
+<br>Locks can be acquired with <a href="Pikari.html#.setLocks">Pikari.setLocks</a>.
 <br>At least one lock must be held before commit can be called.
 </div>
 
@@ -320,7 +314,7 @@
 
 
 <div class="description">
-    Name of the user. Automatically generated if not explicitly given in <a href="#.start">Pikari.start</a>.
+    Name of the user. Automatically generated if not explicitly given in <a href="Pikari.html#.start">Pikari.start</a>.
 Maximum length of a name is 200 letters.
 </div>
 
@@ -390,7 +384,8 @@ Maximum length of a name is 200 letters.
 <div class="description">
     Users currenty online.
 <br>Keys identify users and values tell the times when users became online.
-<br>Changes to user presence can be listened with <a href="#.addUserListener">Pikari.addUserListener</a>.
+<br>Changes to user presence can be listened with <a href="Pikari.html#.addUserListener">Pikari.addUserListener</a>.
+<br>The users map is ordered by ascending connection time (which means that <a href="Pikari.html#.user">Pikari.user</a> is last at Pikari.EVENT.START)
 </div>
 
 
@@ -521,7 +516,7 @@ Maximum length of a name is 200 letters.
 
             
 
-            <td class="description last"><a href="#.changeCallback">Pikari.changeCallback</a></td>
+            <td class="description last"><a href="Pikari.html#.changeCallback">Pikari.changeCallback</a></td>
         </tr>
 
     
@@ -653,7 +648,7 @@ Maximum length of a name is 200 letters.
 
             
 
-            <td class="description last"><a href="#.lockCallback">Pikari.lockCallback</a></td>
+            <td class="description last"><a href="Pikari.html#.lockCallback">Pikari.lockCallback</a></td>
         </tr>
 
     
@@ -785,7 +780,7 @@ Maximum length of a name is 200 letters.
 
             
 
-            <td class="description last"><a href="#.messageCallback">Pikari.messageCallback</a></td>
+            <td class="description last"><a href="Pikari.html#.messageCallback">Pikari.messageCallback</a></td>
         </tr>
 
     
@@ -917,7 +912,7 @@ Maximum length of a name is 200 letters.
 
             
 
-            <td class="description last"><a href="#.userCallback">Pikari.userCallback</a></td>
+            <td class="description last"><a href="Pikari.html#.userCallback">Pikari.userCallback</a></td>
         </tr>
 
     
@@ -1771,7 +1766,7 @@ The default will be set to local data but not sent to server database.
 
             
 
-            <td class="description last">the string to be added; truncated to 10000 letters.</td>
+            <td class="description last">the string to be added; will be truncated to 10000 letters.</td>
         </tr>
 
     
@@ -1852,7 +1847,7 @@ The default will be set to local data but not sent to server database.
 
 <div class="description">
     Rollback any changes to data fields.
-<br>Will cause a local <a href="#.changeCallback">Pikari.changeCallback</a> with a list of rolled-back (modified) fields.
+<br>Will cause a local <a href="Pikari.html#.changeCallback">Pikari.changeCallback</a> with a list of rolled-back (modified) fields.
 </div>
 
 
@@ -2221,7 +2216,7 @@ The default will be set to local data but not sent to server database.
 
         
 <div class="param-desc">
-    true if locking was successful. False if user lost all locks and is not eligible to <a href="#.commit">Pikari.commit</a>.
+    true if locking was successful. False if user lost all locks and is not eligible to <a href="Pikari.html#.commit">Pikari.commit</a>.
 </div>
 
 
@@ -2310,7 +2305,7 @@ The default will be set to local data but not sent to server database.
 
             
 
-            <td class="description last"><a href="#.stopCallback">Pikari.stopCallback</a></td>
+            <td class="description last"><a href="Pikari.html#.stopCallback">Pikari.stopCallback</a></td>
         </tr>
 
     
@@ -2533,6 +2528,138 @@ If a user with same name is already connected, existing user will be immediately
 
 
         
+            
+
+    
+
+    
+    <hr><h4 class="name" id=".waiting"><span class="type-signature">(static) </span>waiting<span class="signature">(waiting)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    A helper function set wait or default cursor
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>waiting</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">boolean</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">true for waiting, false for default cursor</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
     
 
     
@@ -2604,7 +2731,7 @@ If a user with same name is already connected, existing user will be immediately
 
             
 
-            <td class="description last"><a href="#.EVENT">Pikari.EVENT</a></td>
+            <td class="description last"><a href="Pikari.html#.EVENT">Pikari.EVENT</a></td>
         </tr>
 
     
@@ -2785,7 +2912,7 @@ If a user with same name is already connected, existing user will be immediately
 
             
 
-            <td class="description last">Connection with server is established (see <a href="#.start">Pikari.start</a>) or server restarted itself</td>
+            <td class="description last">Connection with server is established (see <a href="Pikari.html#.start">Pikari.start</a>) or server restarted itself</td>
         </tr>
 
     
@@ -2808,7 +2935,7 @@ If a user with same name is already connected, existing user will be immediately
 
             
 
-            <td class="description last">Someone committed data (see <a href="#.commit">Pikari.commit</a>)</td>
+            <td class="description last">Someone committed data (see <a href="Pikari.html#.commit">Pikari.commit</a>)</td>
         </tr>
 
     
@@ -2831,7 +2958,7 @@ If a user with same name is already connected, existing user will be immediately
 
             
 
-            <td class="description last">The local user rollbacked (see <a href="#.rollback">Pikari.rollback</a>)</td>
+            <td class="description last">The local user rollbacked (see <a href="Pikari.html#.rollback">Pikari.rollback</a>)</td>
         </tr>
 
     
@@ -2854,7 +2981,7 @@ If a user with same name is already connected, existing user will be immediately
 
             
 
-            <td class="description last">Someone (see <a href="#.dropData">Pikari.dropData</a>) or server (changer == "server autorestart") dropped all data</a></td>
+            <td class="description last">Someone (see <a href="Pikari.html#.dropData">Pikari.dropData</a>) or server (changer == "server autorestart") dropped all data</td>
         </tr>
 
     
@@ -3057,7 +3184,7 @@ If a user with same name is already connected, existing user will be immediately
 
 <div class="description">
     Triggered when locks are acquired or released.
-<br>Note: also local <a href="#.setLocks">Pikari.setLocks</a> calls will trigger the lockCallback.
+<br>Note: also local <a href="Pikari.html#.setLocks">Pikari.setLocks</a> calls will trigger the lockCallback.
 </div>
 
 
@@ -3557,7 +3684,7 @@ If a user with same name is already connected, existing user will be immediately
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.3</a> on Tue Sep 24 2019 13:56:10 GMT+0300 (EEST)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.3</a> on Thu Sep 26 2019 15:06:14 GMT+0300 (EEST)
 </footer>
 
 <script> prettyPrint(); </script>

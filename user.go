@@ -25,7 +25,9 @@ func addUser(u *user) {
 		removeUser(existinguser, false)
 	}
 	users[u.id] = u
-	fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
+	if config.Usercount {
+		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
+	}
 	mutex.Unlock()
 }
 
@@ -42,7 +44,9 @@ func removeUser(u *user, lock bool) {
 	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	transmitMessage(&wsdata{"server", "", []string{}, "sign", u.id}, false)
-	fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
+	if config.Usercount {
+		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
+	}
 }
 
 func wasUserdead(u *user) bool {

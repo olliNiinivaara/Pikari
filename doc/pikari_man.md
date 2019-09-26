@@ -12,7 +12,7 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-Pikari is a web server and database for the Pikari rapid web application prototyping framework.
+pikari is a web server and database for the Pikari rapid web application prototyping framework.
 It serves files of application directory given as command line parameter to 127.0.0.1.
 Above all it serves as an end-point to *pikari.js* API, documented [here](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html).
 
@@ -72,13 +72,16 @@ NOTES
 ===========
 
 The normal data modification protocol between client and server is as follows:
-1. Client sends a *setlocks* message to server to request exclusive write locks for some data (fields)
+1. Client sends a *setlocks* message to server to request mutually exclusive write locks for some data (fields)
 2. Server sends a *lock* message to all clients that tells which locks are currently held by which client
 3. If client was not able to acquire requested locks, it MUST abort the modification procedure. Otherwise:
 4. When all modified data is available, client sends a *commit* message to server which contains the modified data fields
 5. New data is written (field-by-field inserts, updates and/or deletions) to disk and all locks held by client are released
 6. Server sends a *change* message to all clients which contains the modified data fields
 7. Server sends a *lock* message to all clients that tells which locks are currently held by which client
+
+Tip: When you change the application served by pikari, you may need to
+[hard reload](https://en.wikipedia.org/wiki/Wikipedia:Bypass_your_cache) the browser page
 
 BUGS
 ====
@@ -93,9 +96,14 @@ EXAMPLES
 in linux, serves an application at directory _./_Hellopikari_/_ with *pikari*, *pikari.js* and *pikari.toml* at *cwd*.
 
 
-C:\pikari -appdir C:\\_Hellopikari -password pillowHikari
+C:\pikari -appdir C:\\Hellopikari -password pillowHikari
 
 in windows, starts *C:\\pikari* and serves application at absolute path _C:\\Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
+
+
+../pikari -appdir .
+
+Runs *pikari* from parent directory and serves application in *cwd* with it's *pikari.js* and *pikari.toml*.
 
 AUTHOR
 ======
@@ -104,4 +112,4 @@ Olli Niinivaara <olli.niinivaara@verkkoyhteys.fi>
 
 ---
 
-<p style="text-align: center;">0.8 2019-24-09</p>
+<p style="text-align: center;">0.8 2019-26-09</p>

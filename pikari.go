@@ -28,6 +28,7 @@ type configuration struct {
 	Port         int
 	Maxpagecount int
 	Autorestart  bool
+	Usercount    bool
 }
 
 func main() {
@@ -79,7 +80,9 @@ func main() {
 	http.Handle("/pikari.js", rootfs)
 	fmt.Println("Serving " + appdir + " to " + addr)
 	fmt.Println("Send SIGINT (Ctrl+C) to quit")
-	fmt.Print(time.Now().Format(tf) + " users: 0" + " ")
+	if config.Usercount {
+		fmt.Print(time.Now().Format(tf) + " users: 0" + " ")
+	}
 	log.Println("---")
 
 	sigs := make(chan os.Signal, 1)
