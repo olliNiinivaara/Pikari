@@ -68,6 +68,33 @@ note: If your prototype is not using a database, set maxpagecount to 0 get rid o
 
 note: If database autorestarts itself, the *drop* message's sender (and therefore changeCallback's changer) will be *server autorestart*.
 
+
+REVERSE PROXY ENVIRONMENT
+=========================
+
+You should use a HTTPS+WSS reverse proxy between pikari and client when deploying a prototype to the open Internet. The web socket upgrade request is sent
+to path */ws* which you must hail. The configuration for [NGINX](https://www.nginx.com/) (say) should be something like this:
+
+```nginx
+upstream pikariws {
+  server 127.0.0.1:8080;
+  keepalive 100;
+}
+server {
+  location /pikari/ {
+    proxy_pass http://127.0.0.1:8080/;
+  }
+  location /pikari/ws {
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "Upgrade";
+    proxy_http_version 1.1;
+    proxy_connect_timeout 8h;
+    proxy_send_timeout 8h;
+    proxy_read_timeout 8h;
+    proxy_pass http://pikariws/ws;
+  }
+```
+
 NOTES
 ===========
 
@@ -112,4 +139,4 @@ Olli Niinivaara <olli.niinivaara@verkkoyhteys.fi>
 
 ---
 
-<p style="text-align: center;">0.8 2019-26-09</p>
+<p style="text-align: center;">0.8 2019-27-09</p>

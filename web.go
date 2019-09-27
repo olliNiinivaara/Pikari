@@ -42,6 +42,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - user name missing in web socket handshake")
 		return
 	}
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
