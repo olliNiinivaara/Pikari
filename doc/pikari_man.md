@@ -12,7 +12,7 @@ SYNOPSIS
 DESCRIPTION
 ===========
 
-pikari is a web server and a database for the Pikari rapid web application prototyping framework.
+pikari is Backend-as-a-Service (web server and database, basically) for rapid web application prototyping.
 It serves as an end-point to *pikari.js* API, documented [here](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html).
 It also serves all static files from a given directory path to IP address 127.0.0.1.
 
@@ -20,8 +20,8 @@ At start, pikari looks for *pikari.toml* and *pikari.js* at the *current working
 If a file is not found, it will recreate it.
 This means that you can use different, modified *pikari.toml* or *pikari.js* for different applications by starting them at different *cwd*.
 
-Options
--------
+OPTIONS
+=======
 
 -appdir _directorypath_
 
@@ -123,9 +123,9 @@ EXAMPLES
 in linux, serves an application at directory _./_Hellopikari_/_ with *pikari*, *pikari.js* and *pikari.toml* at *cwd*.
 
 
-C:\pikari -appdir C:\\Hellopikari -password pillowHikari
+pikari -appdir C:\\Hellopikari -password pillowHikari
 
-in windows, starts *C:\\pikari* and serves application at absolute path _C:\\Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
+in windows, starts *pikari.exe* in *cwd* and serves application at absolute path _C:\\Hellopikari_  with *pikari.js* and *pikari.toml* at *cwd* and with password _pillowHikari_.
 
 
 ../pikari -appdir .
@@ -139,4 +139,4 @@ Olli Niinivaara <olli.niinivaara@verkkoyhteys.fi>
 
 ---
 
-<p style="text-align: center;">0.8 2019-27-09</p>
+0.8 2019-10-03
