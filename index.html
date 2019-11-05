@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Pikari</title>
+  <noscript>Pikari needs Javascript in order to work.</noscript>
+</head>
+<body>
+  <h2>Pikari</h2>
+  <ul id="applist"></ul>
+</body>  
+<script src="/pikari.js"></script>
+<script> 
+  const username = window.prompt("Enter your user name for Pikari")
+  if (!username) document.body.innerHTML = "FAIL!"
+  else {
+    Pikari.addChangeListener(()=>{
+    document.getElementById("applist").innerHTML = Pikari.getFields().reduce((result, key) => result + 
+    `<li><a href="${'/'+key+'/?user='+Pikari.user}">${Pikari.data.get(key)}</a></li>`, '')   
+    })
+    Pikari.start(username)
+  }
+</script>
+</html>

@@ -28,8 +28,7 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	err = json.Unmarshal(b, &request)
-	if err != nil {
+	if err = json.Unmarshal(b, &request); err != nil {
 		log.Println("Pikari server error - setLocks parsing error: " + err.Error())
 		w.Write([]byte(`{"error": "invalid setLocks request"}`))
 	} else {
@@ -80,27 +79,23 @@ func notifyLocking(sender *string) {
 }
 
 func commit(u *user, newdata *string) {
-	if database == nil {
-		return
-	}
 	var fields map[string]string
-	err := json.Unmarshal([]byte(*newdata), &fields)
-	mutex.Lock()
-	defer mutex.Unlock()
-	defer removeLocks(u, true)
-	if err != nil {
+	if err := json.Unmarshal([]byte(*newdata), &fields); err != nil {
 		log.Println("Pikari server error - could not unmarshal commit data: " + string(*newdata))
 		return
 	}
+	mutex.Lock()
+	defer mutex.Unlock()
+	defer removeLocks(u, true)
 	if len(fields) == 0 {
 		return
 	}
-	tx, err := database.Begin()
+	tx, err := u.app.database.Begin()
 	if err != nil {
 		log.Fatal("Pikari server error - could not start transaction: " + err.Error())
 	}
 	for field := range fields {
-		if ok := update(tx, field, fields[field]); !ok {
+		if ok := update(u.app, tx, field, fields[field]); !ok {
 			return
 		}
 	}
@@ -109,37 +104,31 @@ func commit(u *user, newdata *string) {
 		tx.Rollback()
 		return
 	}
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
-	buffer.Reset()
+	u.app.buffer.Reset()
 	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
-func dropData(username string) {
-	if database == nil {
-		return
-	}
+func dropData(app *appstruct, username string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	locks = make(map[string]lock)
-	tx, err := database.Begin()
+	tx, err := app.database.Begin()
 	if err != nil {
 		log.Fatal("Pikari server error - could not start drop transaction: " + err.Error())
 	}
-	err = dropDb(tx)
-	if err != nil {
+	if err = dropDb(app, tx); err != nil {
 		log.Println("Pikari server error - could not drop: " + err.Error())
 		tx.Rollback()
 		return
 	}
-	err = tx.Commit()
-	if err != nil {
+	if err = tx.Commit(); err != nil {
 		log.Fatal("Pikari server error - could not commit drop: " + err.Error())
 	}
-	buffer.Reset()
-	buffer.WriteString("{}")
+	app.buffer.Reset()
+	app.buffer.WriteString("{}")
 	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
 	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"}, false)
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -15,6 +14,7 @@ type user struct {
 	id    string
 	conn  *websocket.Conn
 	since time.Time
+	app   *appstruct
 }
 
 var users = make(map[string]*user)
@@ -25,9 +25,9 @@ func addUser(u *user) {
 		removeUser(existinguser, false)
 	}
 	users[u.id] = u
-	if config.Usercount {
+	/*if config.Usercount {
 		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
-	}
+	}*/
 	mutex.Unlock()
 }
 
@@ -43,15 +43,14 @@ func removeUser(u *user, lock bool) {
 	delete(users, u.id)
 	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	transmitMessage(&wsdata{"server", "", []string{}, "sign", u.id}, false)
-	if config.Usercount {
+	transmitMessage(&wsdata{"server", "", "", []string{}, "sign", u.id}, false)
+	/*if config.Usercount {
 		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
-	}
+	}*/
 }
 
 func wasUserdead(u *user) bool {
-	err := u.conn.WriteMessage(websocket.PingMessage, []byte{})
-	if err != nil {
+	if err := u.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 		removeUser(u, false)
 		return true
 	}
@@ -63,7 +62,7 @@ func checkUser(u *user, pw string) bool {
 		log.Println("removed user still on-line: " + u.id)
 		return false
 	}
-	if pw != password {
+	if u.app != nil && pw != u.app.Password {
 		log.Println("wrong password: " + u.id)
 		return false
 	}
@@ -71,14 +70,14 @@ func checkUser(u *user, pw string) bool {
 }
 
 func getUser(uid string, pw string) *user {
-	if pw != password {
-		log.Println("wrong password: " + uid)
-		return nil
-	}
 	var u *user
 	var ok bool
 	if u, ok = users[uid]; !ok {
 		log.Println("unsigned user detected: " + uid)
+		return nil
+	}
+	if pw != u.app.Password {
+		log.Println("wrong password: " + uid)
 		return nil
 	}
 	return u

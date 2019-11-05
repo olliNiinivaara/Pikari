@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
@@ -16,6 +15,7 @@ var mutex sync.Mutex
 type wsdata struct {
 	Sender      string   `json:"sender"`
 	Password    string   `json:"w,omitempty"`
+	App         string   `json:"app,omitempty"`
 	Receivers   []string `json:"receivers,omitempty"`
 	Messagetype string   `json:"messagetype"`
 	Message     string   `json:"message"`
@@ -34,12 +34,23 @@ func favicon(w http.ResponseWriter, r *http.Request) {
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Connection", "close")
 	userid := r.URL.Query().Get("user")
+	app := r.URL.Query().Get("app")
+	if len(app) > 1 {
+		app = app[1 : len(app)-1]
+	} else {
+		app = ""
+	}
 	if utf8.RuneCountInString(userid) > 200 {
 		userid = string([]rune(userid)[0:200])
 	}
 	if userid == "" {
 		log.Println("Pikari server error - user name missing in web socket handshake")
+		return
+	}
+	if !appExists(&app) {
+		log.Println("Pikari server error - invalid app name in web socket handshake: " + app)
 		return
 	}
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -48,9 +59,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		log.Println("Pikari server error - web socket upgrade failed:" + err.Error())
 		return
 	}
-	theuser := user{id: userid, conn: c, since: time.Now()}
-	addUser(&theuser)
-	defer removeUser(&theuser, true)
+	theuser := createUser(&userid, &app, c)
+	defer removeUser(theuser, true)
 
 	for {
 		_, msg, err := c.ReadMessage()
@@ -61,12 +71,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		request := wsdata{}
-		err = json.Unmarshal(msg, &request)
-		if err != nil {
+		if err = json.Unmarshal(msg, &request); err != nil {
 			log.Println("Pikari server error - ws parsing error: " + err.Error())
 			break
 		}
-		if !checkUser(&theuser, request.Password) {
+		if !checkUser(theuser, request.Password) {
 			break
 		}
 		switch request.Messagetype {
@@ -76,13 +85,13 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			}
 			log.Println(&request.Message)
 		case "start":
-			start(&theuser)
+			start(theuser)
 		case "message":
 			transmitMessage(&request, true)
 		case "commit":
-			commit(&theuser, &request.Message)
+			commit(theuser, &request.Message)
 		case "dropdata":
-			dropData(theuser.id)
+			dropData(theuser.app, theuser.id)
 		default:
 			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
 		}
@@ -95,10 +104,10 @@ func start(theuser *user) {
 		Users string
 	}
 	mutex.Lock()
-	message := startdata{Db: string(getData()), Users: getUsers()}
+	message := startdata{Db: string(getData(theuser.app)), Users: getUsers()}
 	b, _ := json.Marshal(message)
-	transmitMessage(&wsdata{"server", "in", []string{}, "sign", theuser.id}, false)
-	transmitMessage(&wsdata{"server", "", []string{theuser.id}, "start", string(b)}, false)
+	transmitMessage(&wsdata{"server", "in", "", []string{}, "sign", theuser.id}, false)
+	transmitMessage(&wsdata{"server", "", "", []string{theuser.id}, "start", string(b)}, false)
 	mutex.Unlock()
 }
 
@@ -108,6 +117,7 @@ func transmitMessage(message *wsdata, lock bool) {
 	jsonresponse, err := json.Marshal(message)
 	if err != nil {
 		log.Println("Pikari server error - message parsing error : " + err.Error())
+		return
 	}
 
 	if lock {
@@ -116,18 +126,18 @@ func transmitMessage(message *wsdata, lock bool) {
 	}
 	if len(receivers) == 0 {
 		for _, receiver := range users {
-			err := receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse)
-			if err != nil {
+			if err = receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse); err != nil {
 				removeUser(receiver, false)
+				err = nil
 			}
 		}
 		return
 	}
 	for _, receivername := range receivers {
 		if receiver, ok := users[receivername]; ok {
-			err := receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse)
-			if err != nil {
+			if err = receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse); err != nil {
 				removeUser(receiver, false)
+				err = nil
 			}
 		}
 	}
