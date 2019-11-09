@@ -31,6 +31,16 @@ func addUser(u *user) {
 	mutex.Unlock()
 }
 
+func removeAllUsers(app *appstruct) {
+	for _, u := range users {
+		if u.app == app {
+			u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			delete(users, u.id)
+			app.usercount = 0
+		}
+	}
+}
+
 func removeUser(u *user, lock bool) {
 	if lock {
 		mutex.Lock()
@@ -43,7 +53,11 @@ func removeUser(u *user, lock bool) {
 	delete(users, u.id)
 	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	transmitMessage(&wsdata{"server", "", "", []string{}, "sign", u.id}, false)
+	transmitMessage(u.app, &wsdata{"server", "", "", []string{}, "sign", u.id}, false)
+	if u.app != nil {
+		decrementUsercount(u.app)
+		u.app = nil
+	}
 	/*if config.Usercount {
 		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
 	}*/
@@ -63,7 +77,7 @@ func checkUser(u *user, pw string) bool {
 		return false
 	}
 	if u.app != nil && pw != u.app.Password {
-		log.Println("wrong password: " + u.id)
+		log.Println("wrong password by user: " + u.id)
 		return false
 	}
 	return true

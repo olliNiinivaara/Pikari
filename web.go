@@ -87,7 +87,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		case "start":
 			start(theuser)
 		case "message":
-			transmitMessage(&request, true)
+			transmitMessage(theuser.app, &request, true)
 		case "commit":
 			commit(theuser, &request.Message)
 		case "dropdata":
@@ -106,12 +106,12 @@ func start(theuser *user) {
 	mutex.Lock()
 	message := startdata{Db: string(getData(theuser.app)), Users: getUsers()}
 	b, _ := json.Marshal(message)
-	transmitMessage(&wsdata{"server", "in", "", []string{}, "sign", theuser.id}, false)
-	transmitMessage(&wsdata{"server", "", "", []string{theuser.id}, "start", string(b)}, false)
+	transmitMessage(theuser.app, &wsdata{"server", "in", "", []string{}, "sign", theuser.id}, false)
+	transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", string(b)}, false)
 	mutex.Unlock()
 }
 
-func transmitMessage(message *wsdata, lock bool) {
+func transmitMessage(app *appstruct, message *wsdata, lock bool) {
 	var receivers = message.Receivers
 	message.Receivers = []string{}
 	jsonresponse, err := json.Marshal(message)
@@ -126,6 +126,9 @@ func transmitMessage(message *wsdata, lock bool) {
 	}
 	if len(receivers) == 0 {
 		for _, receiver := range users {
+			if receiver.app != app {
+				continue
+			}
 			if err = receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse); err != nil {
 				removeUser(receiver, false)
 				err = nil
@@ -135,6 +138,9 @@ func transmitMessage(message *wsdata, lock bool) {
 	}
 	for _, receivername := range receivers {
 		if receiver, ok := users[receivername]; ok {
+			if receiver.app != app {
+				continue
+			}
 			if err = receiver.conn.WriteMessage(websocket.TextMessage, jsonresponse); err != nil {
 				removeUser(receiver, false)
 				err = nil

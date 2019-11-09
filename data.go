@@ -20,8 +20,6 @@ type lock struct {
 	Lockedsince string `json:"lockedsince"`
 }
 
-var locks = make(map[string]lock)
-
 func setLocks(w http.ResponseWriter, r *http.Request) {
 	var request lockrequest
 	b, err := ioutil.ReadAll(r.Body)
@@ -39,9 +37,9 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 			mutex.Lock()
 			removeLocks(theuser, false)
 			tryToAcquireLocks(theuser, request)
-			b, _ := json.Marshal(locks)
+			b, _ := json.Marshal(theuser.app.locks)
 			w.Write(b)
-			notifyLocking(&theuser.id)
+			notifyLocking(theuser.app, &theuser.id)
 			mutex.Unlock()
 		}
 	}
@@ -49,33 +47,33 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 
 func tryToAcquireLocks(u *user, r lockrequest) {
 	for _, l := range r.Locks {
-		if locked, ok := locks[l]; ok {
+		if locked, ok := u.app.locks[l]; ok {
 			if locked.locker != u && !wasUserdead(locked.locker) {
 				return
 			}
 		}
 	}
 	for _, l := range r.Locks {
-		locks[l] = lock{u, u.id, time.Now().UTC().Format(time.RFC3339)}
+		u.app.locks[l] = lock{u, u.id, time.Now().UTC().Format(time.RFC3339)}
 	}
 }
 
 func removeLocks(u *user, notify bool) {
 	var trueremoval = false
-	for l := range locks {
-		if locks[l].locker == u {
-			delete(locks, l)
+	for l := range u.app.locks {
+		if u.app.locks[l].locker == u {
+			delete(u.app.locks, l)
 			trueremoval = true
 		}
 	}
 	if notify && trueremoval {
-		notifyLocking(&u.id)
+		notifyLocking(u.app, &u.id)
 	}
 }
 
-func notifyLocking(sender *string) {
-	b, _ := json.Marshal(locks)
-	transmitMessage(&wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
+func notifyLocking(app *appstruct, sender *string) {
+	b, _ := json.Marshal(app.locks)
+	transmitMessage(app, &wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
 }
 
 func commit(u *user, newdata *string) {
@@ -98,6 +96,9 @@ func commit(u *user, newdata *string) {
 		if ok := update(u.app, tx, field, fields[field]); !ok {
 			return
 		}
+		if u.app.Name == "Admin" {
+			updateApp(field, fields[field])
+		}
 	}
 	if err != nil {
 		log.Println("Pikari server error - could not commit data: " + err.Error())
@@ -108,13 +109,13 @@ func commit(u *user, newdata *string) {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
 	u.app.buffer.Reset()
-	transmitMessage(&wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
+	transmitMessage(u.app, &wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
 }
 
 func dropData(app *appstruct, username string) {
 	mutex.Lock()
 	defer mutex.Unlock()
-	locks = make(map[string]lock)
+	app.locks = make(map[string]lock)
 	tx, err := app.database.Begin()
 	if err != nil {
 		log.Fatal("Pikari server error - could not start drop transaction: " + err.Error())
@@ -129,6 +130,6 @@ func dropData(app *appstruct, username string) {
 	}
 	app.buffer.Reset()
 	app.buffer.WriteString("{}")
-	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
-	transmitMessage(&wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"}, false)
+	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
+	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"}, false)
 }

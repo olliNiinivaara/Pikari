@@ -21,6 +21,7 @@ func openDb(app *appstruct, dir string, maxPagecount int) {
 	if err != nil {
 		log.Fatal(err.Error() + ": " + path)
 	}
+	app.locks = make(map[string]lock)
 	if _, err = app.database.Exec("PRAGMA synchronous = OFF;"); err != nil {
 		log.Fatal(err)
 	}
@@ -55,21 +56,25 @@ func openDb(app *appstruct, dir string, maxPagecount int) {
 
 func closeDbs() {
 	for _, app := range apps {
-		if app.database == nil {
-			continue
-		}
-		app.get.Close()
-		app.set.Close()
-		if _, err := app.database.Exec("VACUUM;"); err != nil {
-			log.Println(err)
-		}
-		if _, err := app.database.Exec("PRAGMA optimize;"); err != nil {
-			log.Println(err)
-		}
-		app.database.Close()
-		app.database = nil
+		closeDb(app)
 	}
 	fmt.Println("\nGood bye!")
+}
+
+func closeDb(app *appstruct) {
+	if app.database == nil {
+		return
+	}
+	app.get.Close()
+	app.set.Close()
+	if _, err := app.database.Exec("VACUUM;"); err != nil {
+		log.Println(err)
+	}
+	if _, err := app.database.Exec("PRAGMA optimize;"); err != nil {
+		log.Println(err)
+	}
+	app.database.Close()
+	app.database = nil
 }
 
 func getData(app *appstruct) []byte {
@@ -117,7 +122,7 @@ func update(app *appstruct, tx *sql.Tx, field string, value string) bool {
 		_, err = tx.Stmt(app.set).Exec(field, value)
 	}
 	if err != nil {
-		if config.Autorestart {
+		if app.Autorestart == 1 || (app.Autorestart == -1 && apps["admin"].Autorestart == 1) {
 			tx.Rollback()
 			mutex.Unlock()
 			dropData(app, "server autorestart")

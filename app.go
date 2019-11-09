@@ -16,35 +16,41 @@ import (
 type appstruct struct {
 	Name         string
 	Password     string
-	Usercount    int
 	Maxpagecount int
 	Autorestart  int
+	Source       string
 	Gitbranch    string
-	Repourl      string
+	Passive      int
 	exists       bool
 	database     *sql.DB
 	get          *sql.Stmt
 	set          *sql.Stmt
 	del          *sql.Stmt
+	locks        map[string]lock
 	buffer       bytes.Buffer
+	usercount    int
 }
 
 var apps = make(map[string]*appstruct)
 var indexbuffer bytes.Buffer
-var admin *appstruct
+
+//var admin *appstruct
 var appmutex sync.Mutex
 
 func initApps(adminpassword string) {
-	admin = new(appstruct)
-	openDb(admin, "admin", 10000)
-	if err := json.Unmarshal(getData(admin), &apps); err != nil {
+	var a = new(appstruct)
+	openDb(a, "admin", 10000)
+	if err := json.Unmarshal(getData(a), &apps); err != nil {
 		log.Fatal(err)
 	}
-	admin.Name = "Admin"
-	admin.Maxpagecount = apps["admin"].Maxpagecount
-	admin.Autorestart = apps["admin"].Autorestart
-	admin.Password = adminpassword
-	apps["admin"] = admin
+	theadmin := apps["admin"]
+	theadmin.database = a.database
+	theadmin.get = a.get
+	theadmin.set = a.set
+	theadmin.del = a.del
+	theadmin.locks = make(map[string]lock)
+	theadmin.Password = adminpassword
+
 	os.Mkdir(exedir+"admin", 0700)
 
 	files, err := ioutil.ReadDir(exedir)
@@ -62,25 +68,14 @@ func initApps(adminpassword string) {
 		} else {
 			apps[name] = &appstruct{Name: name, Maxpagecount: -1, Autorestart: -1, exists: true}
 			b, _ := json.Marshal(apps[name])
-			updateAdmin(name, string(b))
+			updateAdmindata(name, string(b))
 		}
 	}
 	for dir, app := range apps {
 		if !app.exists {
 			delete(apps, dir)
-			updateAdmin(dir, "null")
+			updateAdmindata(dir, "null")
 		}
-	}
-}
-
-func updateAdmin(dir, value string) {
-	tx, err := admin.database.Begin()
-	if err != nil {
-		log.Fatal("Pikari server error - could not start transaction: " + err.Error())
-	}
-	update(admin, tx, dir, value)
-	if err = tx.Commit(); err != nil {
-		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
 }
 
@@ -105,14 +100,32 @@ func getApp(dir *string) *appstruct {
 	}
 	app := apps[*dir]
 	if app.database == nil {
-		maxpagecount := admin.Maxpagecount
+		maxpagecount := apps["admin"].Maxpagecount
 		if apps[*dir].Maxpagecount > -1 {
 			maxpagecount = apps[*dir].Maxpagecount
 		}
 		openDb(app, *dir, maxpagecount)
 	}
-	app.Usercount++
+	app.usercount++
 	return app
+}
+
+func decrementUsercount(app *appstruct) {
+	appmutex.Lock()
+	defer appmutex.Unlock()
+	app.usercount--
+	if app.usercount == 0 && app.Name != "Admin" {
+		closeDb(app)
+	}
+}
+
+func closeApp(dir string) {
+	if dir == "admin" {
+		log.Println("Bugger, someone tried to close admin")
+		return
+	}
+	removeAllUsers(apps[dir])
+	closeDb(apps[dir])
 }
 
 func getIndexData() []byte {

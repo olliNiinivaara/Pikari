@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en"; style="position: relative; overflow: hidden">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Pikari - Table</title>
+  <noscript>Pikari needs Javascript in order to work.</noscript>
+  <style>
+    body * { box-sizing: border-box; }
+    div { margin: 2em; overflow-x: auto; }
+    p {margin: 2px; }
+    .selected { background-color: khaki}
+    #delete { background-color: red}
+  </style>
+</head>
+<body id="body" style="display: flex; margin: 1em; height: 100vh; background-color: #FAFAFA; font-family: system-ui; font-weight: lighter;">
+<div style="width: 40%; background-color: lightgray">
+  <input id="masterinput" placeholder="add new name"/>
+  <ol id="masterol"></ol>
+  <p id="sumtotal">Sumtotal: 0</p>
+  <button id="clearbutton" style="margin-top: 2em; ">Clear all data</button>
+</div>
+<div style="width: 40%; background-color: lightgray">
+  <input id="detailinput" placeholder="add new item"/>
+  <input id="detailamountinput" placeholder="set amount" type="number" value="1"/>
+  <ol id="detailol"></ol>
+</div>
+</body>
+<script src="/pikari.js"></script>
+<script type="module">
+  window.e = function(id) { return document.getElementById(id) }
+  import {Master} from './master.js'  
+  const master = new Master()
+  Pikari.start()  
+</script>
+</html>
