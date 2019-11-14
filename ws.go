@@ -60,6 +60,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	theuser := createUser(&userid, &app, c)
+	if theuser == nil {
+		log.Println("App disabled or nonexisting: " + app)
+		c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "No such app"))
+		return
+	}
 	defer removeUser(theuser, true)
 
 	for {
@@ -75,6 +80,10 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println("Pikari server error - ws parsing error: " + err.Error())
 			break
 		}
+		if request.Messagetype == "start" {
+			start(theuser, request.Password)
+			continue
+		}
 		if !checkUser(theuser, request.Password) {
 			break
 		}
@@ -84,21 +93,29 @@ func ws(w http.ResponseWriter, r *http.Request) {
 				request.Message = string([]rune(request.Message)[0:1000])
 			}
 			log.Println(&request.Message)
-		case "start":
-			start(theuser)
 		case "message":
 			transmitMessage(theuser.app, &request, true)
 		case "commit":
 			commit(theuser, &request.Message)
 		case "dropdata":
 			dropData(theuser.app, theuser.id)
+		case "logout":
+			c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		default:
 			log.Println("Pikari server error - web socket message type unknown: " + request.Messagetype)
 		}
 	}
 }
 
-func start(theuser *user) {
+func start(theuser *user, password string) {
+	if theuser.app != nil && password != theuser.app.Password {
+		if password == "" {
+			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "passwordrequired"}, false)
+		} else {
+			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "wrongpassword"}, false)
+		}
+		return
+	}
 	type startdata struct {
 		Db    string
 		Users string

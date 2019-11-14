@@ -19,8 +19,8 @@ type appstruct struct {
 	Maxpagecount int
 	Autorestart  int
 	Source       string
-	Gitbranch    string
-	Passive      int
+	Git          string
+	Disabled     int
 	exists       bool
 	database     *sql.DB
 	get          *sql.Stmt
@@ -66,7 +66,7 @@ func initApps(adminpassword string) {
 		if a != nil {
 			a.exists = true
 		} else {
-			apps[name] = &appstruct{Name: name, Maxpagecount: -1, Autorestart: -1, exists: true}
+			apps[name] = &appstruct{Name: name, Maxpagecount: -1, Autorestart: -1, Git: "", exists: true}
 			b, _ := json.Marshal(apps[name])
 			updateAdmindata(name, string(b))
 		}
@@ -81,6 +81,9 @@ func initApps(adminpassword string) {
 
 func createUser(uid *string, dir *string, c *websocket.Conn) *user {
 	theuser := user{id: *uid, conn: c, since: time.Now(), app: getApp(dir)}
+	if *dir != "" && theuser.app == nil {
+		return nil
+	}
 	addUser(&theuser)
 	return &theuser
 }
@@ -95,10 +98,10 @@ func appExists(dir *string) bool {
 func getApp(dir *string) *appstruct {
 	appmutex.Lock()
 	defer appmutex.Unlock()
-	if *dir == "" {
+	app := apps[*dir]
+	if app == nil || app.Disabled == 1 {
 		return nil
 	}
-	app := apps[*dir]
 	if app.database == nil {
 		maxpagecount := apps["admin"].Maxpagecount
 		if apps[*dir].Maxpagecount > -1 {
@@ -132,6 +135,9 @@ func getIndexData() []byte {
 	indexbuffer.Reset()
 	indexbuffer.WriteString("{")
 	for f, v := range apps {
+		if v.Disabled == 1 {
+			continue
+		}
 		jfield, _ := json.Marshal(f)
 		indexbuffer.Write(jfield)
 		indexbuffer.WriteString(`:`)
