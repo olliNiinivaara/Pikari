@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"path/filepath"
 	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -16,14 +15,14 @@ func openDb(app *appstruct, dir string, maxPagecount int) {
 		return
 	}
 	var err error
-	var path = exedir + dir + string(filepath.Separator) + "data.db"
+	var path = exedir + dir + s + "data.db"
 	app.database, err = sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err.Error() + ": " + path)
 	}
 	app.locks = make(map[string]lock)
 	if _, err = app.database.Exec("PRAGMA synchronous = OFF;"); err != nil {
-		log.Fatal(err)
+		log.Fatal(err.Error() + ": " + path)
 	}
 	if _, err = app.database.Exec("PRAGMA journal_mode = OFF;"); err != nil {
 		log.Fatal(err)
@@ -78,9 +77,6 @@ func closeDb(app *appstruct) {
 }
 
 func getData(app *appstruct) []byte {
-	if app == nil {
-		return getIndexData()
-	}
 	if app.buffer.Len() > 0 {
 		return app.buffer.Bytes()
 	}
@@ -124,7 +120,7 @@ func update(app *appstruct, tx *sql.Tx, field string, value string) bool {
 	if err != nil {
 		if app.Autorestart == 1 || (app.Autorestart == -1 && apps["admin"].Autorestart == 1) {
 			tx.Rollback()
-			mutex.Unlock()
+			app.Unlock()
 			dropData(app, "server autorestart")
 			return false
 		}

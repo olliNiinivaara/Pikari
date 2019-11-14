@@ -1,5 +1,6 @@
 /admin
 /.vscode
+index.html
 pikari.js
-pikari.toml
+pikari.log
 *.txt

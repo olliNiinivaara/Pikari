@@ -24,7 +24,7 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 	var request lockrequest
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	if err = json.Unmarshal(b, &request); err != nil {
 		log.Println("Pikari server error - setLocks parsing error: " + err.Error())
@@ -34,13 +34,13 @@ func setLocks(w http.ResponseWriter, r *http.Request) {
 		if theuser == nil {
 			w.Write([]byte(`{"error": "No credentials"}`))
 		} else {
-			mutex.Lock()
+			theuser.app.Lock()
+			defer theuser.app.Unlock()
 			removeLocks(theuser, false)
 			tryToAcquireLocks(theuser, request)
 			b, _ := json.Marshal(theuser.app.locks)
 			w.Write(b)
 			notifyLocking(theuser.app, &theuser.id)
-			mutex.Unlock()
 		}
 	}
 }
@@ -73,7 +73,7 @@ func removeLocks(u *user, notify bool) {
 
 func notifyLocking(app *appstruct, sender *string) {
 	b, _ := json.Marshal(app.locks)
-	transmitMessage(app, &wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)}, false)
+	transmitMessage(app, &wsdata{Sender: *sender, Receivers: []string{}, Messagetype: "lock", Message: string(b)})
 }
 
 func commit(u *user, newdata *string) {
@@ -82,8 +82,8 @@ func commit(u *user, newdata *string) {
 		log.Println("Pikari server error - could not unmarshal commit data: " + string(*newdata))
 		return
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	u.app.Lock()
+	defer u.app.Unlock()
 	defer removeLocks(u, true)
 	if len(fields) == 0 {
 		return
@@ -109,12 +109,12 @@ func commit(u *user, newdata *string) {
 		log.Fatal("Pikari server error - could not commit data: " + err.Error())
 	}
 	u.app.buffer.Reset()
-	transmitMessage(u.app, &wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata}, false)
+	transmitMessage(u.app, &wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata})
 }
 
 func dropData(app *appstruct, username string) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	app.Lock()
+	defer app.Unlock()
 	app.locks = make(map[string]lock)
 	tx, err := app.database.Begin()
 	if err != nil {
@@ -130,6 +130,6 @@ func dropData(app *appstruct, username string) {
 	}
 	app.buffer.Reset()
 	app.buffer.WriteString("{}")
-	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"}, false)
-	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"}, false)
+	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"})
+	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"})
 }

@@ -21,6 +21,8 @@ func dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	formdata := r.MultipartForm
 	defer formdata.RemoveAll()
 	dir := formdata.Value["dir"][0]
@@ -62,6 +64,8 @@ func gitUploadHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, err)
 		return
 	}
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	if !cloneRepo(dir, url, w) {
 		return
 	}
@@ -79,29 +83,30 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	formdata := r.MultipartForm
 	defer formdata.RemoveAll()
 	dir := formdata.Value["dir"][0]
-	appmutex.Lock()
-	defer appmutex.Unlock()
 	if dir == "" || apps[dir] == nil {
 		fmt.Fprintln(w, "App does not exist: "+dir)
 		return
 	}
-	mutex.Lock()
-	defer mutex.Unlock()
+	app := apps[dir]
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
+	app.Lock()
+	defer app.Unlock()
 	disabled := 0
 	if formdata.Value["disabled"] != nil {
 		disabled = 1
 	}
-	disabledchanged := disabled != apps[dir].Disabled
-	apps[dir].Disabled = disabled
-	sourcechanged := formdata.Value["source"][0] != apps[dir].Source
+	disabledchanged := disabled != app.Disabled
+	app.Disabled = disabled
+	sourcechanged := formdata.Value["source"][0] != app.Source
 	if disabledchanged || sourcechanged {
-		apps[dir].Source = formdata.Value["source"][0]
-		b, _ := json.Marshal(apps[dir])
+		app.Source = formdata.Value["source"][0]
+		b, _ := json.Marshal(app)
 		updateAdmindata(dir, string(b))
 	}
 	closeApp(dir)
 	deletedata := formdata.Value["deletedata"]
-	datafile := exedir + dir + string(filepath.Separator) + "data.db"
+	datafile := exedir + dir + s + "data.db"
 	var files []*multipart.FileHeader
 	var giturl *url.URL
 	if formdata.Value["dogit"] == nil {
@@ -136,18 +141,19 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	if data != nil {
 		err = ioutil.WriteFile(datafile, data, 0644)
 		if err != nil {
-			fmt.Fprintln(w, "Error preserving data.db for app "+dir)
+			log.Fatal(w, "Error preserving data.db for app "+dir)
 		}
 	}
 }
 
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	app := r.URL.Query().Get("app")
-	appmutex.Lock()
-	defer appmutex.Unlock()
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	if app == "" || apps[app] == nil {
 		return
 	}
+	mutex := &apps[app].Mutex
 	mutex.Lock()
 	defer mutex.Unlock()
 	closeApp(app)
@@ -169,12 +175,12 @@ func updateAdmindata(dir, value string) {
 	admin.buffer.Reset()
 	s, _ := json.Marshal(value)
 	serialized := `{"` + dir + `":` + string(s) + `}`
-	transmitMessage(apps["admin"], &wsdata{Sender: "admin", Receivers: []string{}, Messagetype: "change", Message: serialized}, false)
+	transmitMessage(apps["admin"], &wsdata{Sender: "admin", Receivers: []string{}, Messagetype: "change", Message: serialized})
 }
 
 func updateApp(dir, value string) {
-	appmutex.Lock()
-	defer appmutex.Unlock()
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	if err := json.Unmarshal([]byte(value), apps[dir]); err != nil {
 		log.Fatal(err)
 	}
@@ -202,7 +208,7 @@ func copyFiles(dir string, files []*multipart.FileHeader, w http.ResponseWriter)
 			return false
 		}
 		name := files[i].Filename
-		index := strings.Index(name, string(filepath.Separator))
+		index := strings.Index(name, s)
 		if index != -1 {
 			name = name[index:]
 		}
@@ -232,6 +238,6 @@ func cloneRepo(dir string, url *url.URL, w http.ResponseWriter) bool {
 		fmt.Fprintln(w, string(out)+" "+err.Error())
 		return false
 	}
-	os.RemoveAll(exedir + dir + string(filepath.Separator) + ".git")
+	os.RemoveAll(exedir + dir + s + ".git")
 	return true
 }

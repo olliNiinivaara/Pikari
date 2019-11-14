@@ -29,16 +29,17 @@ type appstruct struct {
 	locks        map[string]lock
 	buffer       bytes.Buffer
 	usercount    int
+	sync.Mutex
 }
 
 var apps = make(map[string]*appstruct)
 var indexbuffer bytes.Buffer
 
-//var admin *appstruct
-var appmutex sync.Mutex
+var globalmutex sync.Mutex
 
 func initApps(adminpassword string) {
 	var a = new(appstruct)
+	os.Mkdir(exedir+"admin", 0700)
 	openDb(a, "admin", 10000)
 	if err := json.Unmarshal(getData(a), &apps); err != nil {
 		log.Fatal(err)
@@ -50,8 +51,6 @@ func initApps(adminpassword string) {
 	theadmin.del = a.del
 	theadmin.locks = make(map[string]lock)
 	theadmin.Password = adminpassword
-
-	os.Mkdir(exedir+"admin", 0700)
 
 	files, err := ioutil.ReadDir(exedir)
 	if err != nil {
@@ -96,8 +95,8 @@ func appExists(dir *string) bool {
 }
 
 func getApp(dir *string) *appstruct {
-	appmutex.Lock()
-	defer appmutex.Unlock()
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	app := apps[*dir]
 	if app == nil || app.Disabled == 1 {
 		return nil
@@ -114,8 +113,6 @@ func getApp(dir *string) *appstruct {
 }
 
 func decrementUsercount(app *appstruct) {
-	appmutex.Lock()
-	defer appmutex.Unlock()
 	app.usercount--
 	if app.usercount == 0 && app.Name != "Admin" {
 		closeDb(app)
@@ -131,7 +128,7 @@ func closeApp(dir string) {
 	closeDb(apps[dir])
 }
 
-func getIndexData() []byte {
+func getIndexData() string {
 	indexbuffer.Reset()
 	indexbuffer.WriteString("{")
 	for f, v := range apps {
@@ -149,5 +146,5 @@ func getIndexData() []byte {
 		indexbuffer.Truncate(indexbuffer.Len() - 1)
 	}
 	indexbuffer.WriteString("}")
-	return indexbuffer.Bytes()
+	return indexbuffer.String()
 }

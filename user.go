@@ -20,7 +20,8 @@ type user struct {
 var users = make(map[string]*user)
 
 func addUser(u *user) {
-	mutex.Lock()
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
 	if existinguser, ok := users[u.id]; ok {
 		removeUser(existinguser, false)
 	}
@@ -28,7 +29,6 @@ func addUser(u *user) {
 	/*if config.Usercount {
 		fmt.Print("\r" + time.Now().Format(tf) + " users: " + strconv.Itoa(len(users)) + " ")
 	}*/
-	mutex.Unlock()
 }
 
 func removeAllUsers(app *appstruct) {
@@ -43,18 +43,18 @@ func removeAllUsers(app *appstruct) {
 
 func removeUser(u *user, lock bool) {
 	if lock {
-		mutex.Lock()
-		defer mutex.Unlock()
+		globalmutex.Lock()
+		defer globalmutex.Unlock()
 	}
 	currentuser, ok := users[u.id]
 	if !ok || u != currentuser {
 		return
 	}
 	delete(users, u.id)
-	removeLocks(u, true)
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	transmitMessage(u.app, &wsdata{"server", "", "", []string{}, "sign", u.id}, false)
 	if u.app != nil {
+		removeLocks(u, true)
+		transmitMessage(u.app, &wsdata{"server", "", "", []string{}, "sign", u.id})
 		decrementUsercount(u.app)
 		u.app = nil
 	}
@@ -97,11 +97,11 @@ func getUser(uid string, pw string) *user {
 	return u
 }
 
-func getUsers() string {
+func getUsers(app *appstruct) string {
 	var userstring bytes.Buffer
 	userstring.WriteString("{")
 	for _, u := range users {
-		if !wasUserdead(u) {
+		if !wasUserdead(u) && app == u.app {
 			jid, _ := json.Marshal(u.id)
 			userstring.WriteString(string(jid) + ":" + strconv.FormatInt(u.since.Unix(), 10) + ",")
 		}

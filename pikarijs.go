@@ -24,8 +24,9 @@ window.Pikari = new Object()
 * <br>Changes to fields committed by any user are automatically updated.
 *  @type {Map<string, *>}
 *  @example
-*  if Pikari.setLocks("somefield") {
+*  if (await Pikari.setLocks("somefield", someotherfield)) {
 *    Pikari.data.set("somefield", "some value")
+*    Pikari.data.get(someotherfield)[someproperty] = "some value" 
 *    Pikari.commit()
 *  }
 */
@@ -40,7 +41,7 @@ Pikari.generateKey = function () {
 }
 
 /** 
-* @description Name of the user. Automatically generated if not explicitly given in {@link Pikari.start}.
+* @description Name of the user. Automatically generated if not explicitly given as user query param in url or at {@link Pikari.start}.
 * Maximum length of a name is 200 letters.
 * @type {string}
 */
@@ -114,6 +115,7 @@ Pikari.start = function (user, password) {
   document.head.appendChild(style)
   style.sheet.insertRule(" body.waiting * { cursor: wait; }", 0)
   Pikari.waiting(true)
+  if (!user) user = new URLSearchParams(window.location.search).get('user')
   if (user) Pikari.user = user
   Pikari.user = Pikari.user.substring(0, 200)
   if (!password) password = ""
@@ -226,7 +228,7 @@ Pikari.waiting = function (waiting) {
   else {
     const n = document.body.className
     if (n.endsWith(" waiting")) document.body.className = n.substr(0, n.length - 8)
-    else document.body.className = n.replace(" waiting "," ")
+    else document.body.className = n.replace(" waiting ", " ")
   }
 }
 
@@ -237,17 +239,16 @@ Pikari.waiting = function (waiting) {
 * <br>If lock setting fails (because required locks were already locked by other user(s)), all currently held locks by the user are released (to prevent dead-locks).
 * <br>Note: Remember to await for the return value, this is an async function.
 * @async
-* @param {string[]} locks - names of the locks to lock. If locks is missing or empty, tries to acquire all existing field names.
+* @param {...string} locks - names (or array(s) of names) of the locks to lock. If locks is missing or empty, tries to acquire all existing field names.
 * @return {boolean} true if locking was successful. False if user lost all locks and is not eligible to {@link Pikari.commit}.
 */
-Pikari.setLocks = async function (locks) {
-  if (!locks || (Array.isArray(locks) && locks.length == 0)) locks = Pikari.getFields()
-  if (!Array.isArray(locks)) locks = [String(locks)]
-  if (locks.length == 0) throw ("No locks to lock")
+Pikari.setLocks = async function (...locks) {
+  if (!locks || locks.length == 0) locks = Pikari.getFields()
+  locks = locks.flat()
   Pikari.locks = "inflight"
   Pikari.waiting(true)
   try {
-    let response = await fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari.password, "locks": locks }) })
+    let response = await fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari._password, "locks": locks }) })
     if (Pikari.locks === "inflight") {
       Pikari.locks = await response.json()
       if (Pikari.locks["error"]) {
@@ -299,7 +300,7 @@ Pikari.rollback = function () {
     Pikari._oldData.set(field, JSON.parse(oldvalue))
   })
   Pikari.data = Pikari._oldData
-  fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari.password, "locks": [] }) })
+  fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari._password, "locks": [] }) })
   for (let l of Pikari._changelisteners) l(Pikari.EVENT.ROLLBACK, changedfields, Pikari.user)
 }
 
@@ -318,7 +319,7 @@ Pikari.dropData = function () {
 Pikari.sendMessage = function (message, receivers) {
   if (!receivers) receivers = []
   if (!Array.isArray(receivers)) receivers = [receivers]
-  Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "receivers": receivers, "messagetype": "message", "message": message }))
+  Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "app": location.pathname, "receivers": receivers, "messagetype": "message", "message": message }))
 }
 
 /**
@@ -329,6 +330,13 @@ Pikari.log = function (event) {
   if (typeof event !== "string") return
   event = event.substring(0, 10000)
   Pikari._sendToServer("log", event)
+}
+
+/**
+* @description Log out user. Pikari will respond by closing the web socket connection which triggers {@link Pikari.stopCallback}.
+*/
+Pikari.logOut = function () {
+  Pikari._sendToServer("logout")
 }
 
 
@@ -350,18 +358,30 @@ Pikari._reportError = function (error) {
 
 Pikari._sendToServer = function (messagetype, message) {
   if (!Pikari._ws) alert("No connection server!")
-  else Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "messagetype": messagetype, "message": message }))
+  else Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "app": location.pathname, "messagetype": messagetype, "message": message }))
 }
 
 Pikari._handleStart = function (d) {
-  const startdata = JSON.parse(d.message)
-  Object.entries(JSON.parse(startdata.Db)).forEach(([field, data]) => { Pikari.data.set(field, data) })
-  const userbag = JSON.parse(startdata.Users)
-  let userlist = Object.keys(userbag).sort((a, b) => { return userbag[a] - userbag[b] })
-  userlist.forEach((name) => { Pikari.users.set(name, new Date(userbag[name] * 1000)) })
-  const changedfields = Pikari.getFields()
-  for (let l of Pikari._changelisteners) l(Pikari.EVENT.START, changedfields, "")
-  Pikari.waiting(false)
+  let retry = false
+  try {
+    if (d.message == "wrongpassword") return alert("Wrong password")
+    if (d.message == "passwordrequired") {
+      Pikari._password = prompt("Password required")
+      if (!Pikari._password) return Pikari.logOut()
+      retry = true
+      return Pikari._sendToServer("start")
+    }
+    let startdata = JSON.parse(d.message)    
+    Object.entries(JSON.parse(startdata.Db)).forEach(([field, data]) => { Pikari.data.set(field, data) })
+    const userbag = JSON.parse(startdata.Users)
+    let userlist = Object.keys(userbag).sort((a, b) => { return userbag[a] - userbag[b] })
+    userlist.forEach((name) => { Pikari.users.set(name, new Date(userbag[name] * 1000)) })
+    const changedfields = Pikari.getFields()
+    for (let l of Pikari._changelisteners) l(Pikari.EVENT.START, changedfields, "")
+  }
+  finally {
+    if (!retry) Pikari.waiting(false)
+  }
 }
 
 Pikari._handleChange = function (d) {
@@ -396,8 +416,8 @@ Pikari._handleUser = function (d) {
 
 Pikari._startWebSocket = function () {
   const protocol = location.protocol === "https:" ? "wss://" : "ws://"
-  Pikari._ws = new WebSocket(protocol + location.host + location.pathname + "ws?user=" + Pikari.user)
-  
+  Pikari._ws = new WebSocket(protocol + location.host + "/ws?user=" + Pikari.user + "&app=" + location.pathname)
+
   Pikari._ws.onopen = function () {
     Pikari._sendToServer("start")
   }
@@ -409,6 +429,7 @@ Pikari._startWebSocket = function () {
     if (Pikari._stoplistener) preventdefault = Pikari._stoplistener()
     if (!preventdefault) {
       document.querySelectorAll("body *").forEach(el => { el.disabled = true })
+      Pikari.waiting(false)
       alert("Connection to Pikari server was lost!")
     }
   }
@@ -427,5 +448,4 @@ Pikari._startWebSocket = function () {
   }
 
   Pikari._ws.onerror = function (evt) { Pikari._reportError("Web socket problem: " + evt.data) }
-}
-`
+}`

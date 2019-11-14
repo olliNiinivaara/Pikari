@@ -21,8 +21,7 @@
       if (A < B) return -1 ; if (A > B) return 1 ; return 0
     }
     Pikari.addChangeListener(()=>{
-    document.getElementById("applist").innerHTML = Pikari.getFields().sort((a,b) => sort(a, b)).reduce((result, key) => result + 
-    `<li><a href="${'/'+key+'/?user='+Pikari.user}">${Pikari.data.get(key)}</a></li>`, '')   
+		document.getElementById("applist").innerHTML = Pikari.getFields().sort((a,b) => sort(a, b)).reduce((result, key) => result +`<li><a href="${'/'+key+'/?user='+Pikari.user}">${Pikari.data.get(key)}</a></li>`, '')
     })
     Pikari.start(username)
   }
