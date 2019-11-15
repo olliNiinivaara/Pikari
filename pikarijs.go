@@ -6,7 +6,7 @@ const pikari = `/**
 * @author Olli Niinivaara
 * @copyright Olli Niinivaara 2019
 * @license MIT
-* @version 0.8
+* @version 0.9
 */
 
 /** @namespace
@@ -85,13 +85,11 @@ Pikari.users = new Map()
 * @property {string} START - Connection with server is established (see {@link Pikari.start}) or server restarted itself
 * @property {string} COMMIT - Someone committed data (see {@link Pikari.commit})
 * @property {string} ROLLBACK - The local user rollbacked (see {@link Pikari.rollback})
-* @property {string} DROP - Someone (see {@link Pikari.dropData}) or server (changer == "server autorestart") dropped all data 
 */
 Pikari.EVENT = {
   START: "START",
   COMMIT: "COMMIT",
-  ROLLBACK: "ROLLBACK",
-  DROP: "DROP"
+  ROLLBACK: "ROLLBACK"
 }
 Object.freeze(Pikari.EVENT)
 
@@ -107,7 +105,8 @@ Pikari.clean = function (str) {
 /** 
 * @description Connects the Pikari client to the Pikari server with given name and password (both optional).
 * If a user with same name is already connected, existing user will be immediately disconnected.
-* @param {string} user - user name; will be truncated to 200 letters
+* @param {string} user - user name (max 200 letters). If user is false, user name from URL query param is used.
+* If URL query param does not exist and user is "prompt", user name is asked. Finally, if no user name is given, a random name is used.
 * @param {string} password - if a global password parameter was given when server was started, this must match it
 */
 Pikari.start = function (user, password) {
@@ -115,7 +114,11 @@ Pikari.start = function (user, password) {
   document.head.appendChild(style)
   style.sheet.insertRule(" body.waiting * { cursor: wait; }", 0)
   Pikari.waiting(true)
-  if (!user) user = new URLSearchParams(window.location.search).get('user')
+  if (!user  || user == "prompt") {
+    const userparam = new URLSearchParams(window.location.search).get('user')
+    if (userparam) user = userparam
+    else if (user == "prompt") user = prompt(document.title+"\nUser name")
+  }
   if (user) Pikari.user = user
   Pikari.user = Pikari.user.substring(0, 200)
   if (!password) password = ""
@@ -305,13 +308,6 @@ Pikari.rollback = function () {
 }
 
 /**
-* @description A drastic operation to immediately remove all data from server.
-*/
-Pikari.dropData = function () {
-  Pikari._sendToServer("dropdata")
-}
-
-/**
 * @description Send a message to other on-line users.
 * @param message - the message to send
 * @param {string|string[]} - a receiver or array of receivers. If missing or empty, the message will be sent to all users.
@@ -393,11 +389,6 @@ Pikari._handleChange = function (d) {
   for (let l of Pikari._changelisteners) l(Pikari.EVENT.COMMIT, Object.keys(newdata), d.sender)
 }
 
-Pikari._handleDrop = function (d) {
-  Pikari.data = new Map()
-  for (let l of Pikari._changelisteners) l(Pikari.EVENT.DROP, [], d.sender)
-}
-
 Pikari._handleLocking = function (d) {
   Pikari.locks = JSON.parse(d.message)
   Pikari.mylocks = []
@@ -441,7 +432,6 @@ Pikari._startWebSocket = function () {
       case "message": { for (let l of Pikari._messagelisteners) l(d.sender, d.message); break }
       case "lock": { Pikari._handleLocking(d); break }
       case "change": { Pikari._handleChange(d); break }
-      case "drop": { Pikari._handleDrop(d); break }
       case "sign": { Pikari._handleUser(d); break }
       default: Pikari._reportError("Unrecognized message type received: " + d.messagetype)
     }

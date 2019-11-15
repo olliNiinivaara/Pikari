@@ -210,7 +210,7 @@ export class Admin {
     }
     const text = await response.text()
     Pikari.waiting(false)
-    if (text) alert(text); else admin.render
+    if (text) alert(text); else admin.render()
   }
 
   sort (a, b) {

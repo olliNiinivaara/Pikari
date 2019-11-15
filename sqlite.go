@@ -121,17 +121,23 @@ func update(app *appstruct, tx *sql.Tx, field string, value string) bool {
 		if app.Autorestart == 1 || (app.Autorestart == -1 && apps["admin"].Autorestart == 1) {
 			tx.Rollback()
 			app.Unlock()
-			dropData(app, "server autorestart")
-			return false
+			if dropDb(app) == nil {
+				transmitMessage(app, &wsdata{Sender: "server", Receivers: []string{}, Messagetype: "change", Message: "{}"})
+				return false
+			}
 		}
 		log.Fatal(err)
 	}
 	return true
 }
 
-func dropDb(app *appstruct, tx *sql.Tx) error {
+func dropDb(app *appstruct) error {
+	if app.Name == "Admin" {
+		return nil
+	}
 	_, err := app.database.Exec("DROP TABLE Data")
 	_, err = app.database.Exec("CREATE TABLE IF NOT EXISTS Data (field STRING NOT NULL PRIMARY KEY, value text);")
+	app.buffer.Reset()
 	log.Println("Database dropped")
 	return err
 }

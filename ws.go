@@ -86,8 +86,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			transmitMessage(theuser.app, &request)
 		case "commit":
 			commit(theuser, &request.Message)
-		case "dropdata":
-			dropData(theuser.app, theuser.id)
 		case "logout":
 			c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		default:

@@ -40,7 +40,7 @@ func main() {
 	exedir += s
 	var pw string
 	var port int
-	flag.StringVar(&pw, "password", "", "password for the application")
+	flag.StringVar(&pw, "password", "", "password for administering")
 	flag.IntVar(&port, "port", 8080, "IP port")
 	flag.Parse()
 	if pw == "" {

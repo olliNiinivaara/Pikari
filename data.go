@@ -111,25 +111,3 @@ func commit(u *user, newdata *string) {
 	u.app.buffer.Reset()
 	transmitMessage(u.app, &wsdata{Sender: u.id, Receivers: []string{}, Messagetype: "change", Message: *newdata})
 }
-
-func dropData(app *appstruct, username string) {
-	app.Lock()
-	defer app.Unlock()
-	app.locks = make(map[string]lock)
-	tx, err := app.database.Begin()
-	if err != nil {
-		log.Fatal("Pikari server error - could not start drop transaction: " + err.Error())
-	}
-	if err = dropDb(app, tx); err != nil {
-		log.Println("Pikari server error - could not drop: " + err.Error())
-		tx.Rollback()
-		return
-	}
-	if err = tx.Commit(); err != nil {
-		log.Fatal("Pikari server error - could not commit drop: " + err.Error())
-	}
-	app.buffer.Reset()
-	app.buffer.WriteString("{}")
-	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "lock", Message: "{}"})
-	transmitMessage(app, &wsdata{Sender: username, Receivers: []string{}, Messagetype: "drop", Message: "{}"})
-}
