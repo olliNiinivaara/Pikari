@@ -1,8 +1,9 @@
-# 🏆 Pikari 0.8.9
+# 🏆 Pikari
 - Build working prototypes - best way to elicitate UX and functional requirements
 - Backend-as-a-Service (BaaS) - just design the user interface
 - Minimal easy Javascript API - get productive in minutes
 - Framework agnostic - use your favorite tools or stick to vanillaJs
+- Developer-friendly - configure and update all apps remotely via web admin GUI
 - Pragmatic examples available - see below
 - Learning web programming? - Pikari is a great environment for that, too
 
