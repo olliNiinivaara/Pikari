@@ -82,8 +82,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println(&request.Message)
 		case "message":
 			theuser.app.Lock()
-			defer theuser.app.Unlock()
 			transmitMessage(theuser.app, &request)
+			theuser.app.Unlock()
 		case "commit":
 			commit(theuser, &request.Message)
 		case "logout":
