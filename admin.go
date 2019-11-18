@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -105,15 +104,14 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 		updateAdmindata(dir, string(b))
 	}
 	closeApp(dir)
-	deletedata := formdata.Value["deletedata"]
-	datafile := exedir + dir + s + "data.db"
-	var files []*multipart.FileHeader
+	if formdata.Value["deletedata"] != nil {
+		os.Remove(datadir + dir + ".db")
+	}
+	files := formdata.File["files"]
 	var giturl *url.URL
-	if formdata.Value["dogit"] == nil {
-		files = formdata.File["files"]
-	} else {
+	if formdata.Value["dogit"] != nil {
 		if formdata.Value["source"][0] == "" {
-			fmt.Fprintln(w, "Repo URL missing, cannot update")
+			fmt.Fprintln(w, "git repo source URL missing")
 			return
 		}
 		giturl, err = url.ParseRequestURI(formdata.Value["source"][0])
@@ -121,28 +119,16 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintln(w, err)
 			return
 		}
-	}
-	if formdata.Value["dogit"] == nil && (files == nil || len(files) == 0) {
-		if deletedata != nil {
-			os.Remove(datafile)
+	} else {
+		if files == nil {
+			return
 		}
-		return
-	}
-	var data []byte
-	if deletedata == nil {
-		data, _ = ioutil.ReadFile(datafile)
 	}
 	os.RemoveAll(exedir + dir)
 	if files != nil {
 		copyFiles(dir, files, w)
 	} else {
 		cloneRepo(dir, giturl, w)
-	}
-	if data != nil {
-		err = ioutil.WriteFile(datafile, data, 0644)
-		if err != nil {
-			log.Fatal(w, "Error preserving data.db for app "+dir)
-		}
 	}
 }
 
@@ -160,6 +146,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	updateAdmindata(app, "null")
 	apps[app] = nil
 	os.RemoveAll(exedir + app)
+	os.Remove(datadir + app)
 }
 
 func updateAdmindata(dir, value string) {

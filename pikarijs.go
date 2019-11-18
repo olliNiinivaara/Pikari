@@ -107,12 +107,15 @@ Pikari.clean = function (str) {
 * If a user with same name is already connected, existing user will be immediately disconnected.
 * @param {string} user - user name (max 200 letters). If user is false, user name from URL query param is used.
 * If URL query param does not exist and user is "prompt", user name is asked. Finally, if no user name is given, a random name is used.
-* @param {string} password - if a global password parameter was given when server was started, this must match it
+* @param {string} password - if password is set for application, this must match it
 */
 Pikari.start = function (user, password) {
-  let style = document.createElement('style')
-  document.head.appendChild(style)
-  style.sheet.insertRule(" body.waiting * { cursor: wait; }", 0)
+  if (!Pikari._startstate) {
+    Pikari._startstate = "starting"
+    let style = document.createElement('style')
+    document.head.appendChild(style)
+    style.sheet.insertRule(" body.waiting * { cursor: wait; }", 0)
+  }
   Pikari.waiting(true)
   if (!user  || user == "prompt") {
     const userparam = new URLSearchParams(window.location.search).get('user')
@@ -223,15 +226,19 @@ Pikari.getFields = function () {
 }
 
 /**
-* @description A helper function set wait or default cursor
-* @param {boolean} waiting - true for waiting, false for default cursor
+* @description A helper function set wait cursor and disable all elements
+* @param {boolean} waiting - true for waiting, false for defaulting cursor and re-enabling elements
 */
 Pikari.waiting = function (waiting) {
-  if (waiting) document.body.className += (" waiting")
+  if (waiting) {
+    document.body.className += (" waiting")
+    document.querySelectorAll("body *").forEach(el => { el.disabled = true })
+  }
   else {
     const n = document.body.className
     if (n.endsWith(" waiting")) document.body.className = n.substr(0, n.length - 8)
     else document.body.className = n.replace(" waiting ", " ")
+    document.querySelectorAll("body *").forEach(el => { el.disabled = false })
   }
 }
 
@@ -358,15 +365,9 @@ Pikari._sendToServer = function (messagetype, message) {
 }
 
 Pikari._handleStart = function (d) {
-  let retry = false
   try {
     if (d.message == "wrongpassword") return alert("Wrong password")
-    if (d.message == "passwordrequired") {
-      Pikari._password = prompt("Password required")
-      if (!Pikari._password) return Pikari.logOut()
-      retry = true
-      return Pikari._sendToServer("start")
-    }
+    if (d.message == "passwordrequired") return alert("Password required")
     let startdata = JSON.parse(d.message)    
     Object.entries(JSON.parse(startdata.Db)).forEach(([field, data]) => { Pikari.data.set(field, data) })
     const userbag = JSON.parse(startdata.Users)
@@ -374,9 +375,10 @@ Pikari._handleStart = function (d) {
     userlist.forEach((name) => { Pikari.users.set(name, new Date(userbag[name] * 1000)) })
     const changedfields = Pikari.getFields()
     for (let l of Pikari._changelisteners) l(Pikari.EVENT.START, changedfields, "")
+    Pikari._startstate = "started"
   }
   finally {
-    if (!retry) Pikari.waiting(false)
+    Pikari.waiting(false)
   }
 }
 
@@ -416,10 +418,10 @@ Pikari._startWebSocket = function () {
   Pikari._ws.onclose = function () {
     Pikari._ws = null
     Pikari.data = new Map()
+    if (Pikari._startstate != "started") return
     let preventdefault = false
     if (Pikari._stoplistener) preventdefault = Pikari._stoplistener()
     if (!preventdefault) {
-      document.querySelectorAll("body *").forEach(el => { el.disabled = true })
       Pikari.waiting(false)
       alert("Connection to Pikari server was lost!")
     }

@@ -10,7 +10,7 @@ const index1 = `<!DOCTYPE html>
 </head>
 <body>
   <h2>Pikari</h2>
-  <ul id="applist"></ul>
+  <ol id="applist"></ol>
 </body>  
 <script src="/pikari.js"></script>
 <script>

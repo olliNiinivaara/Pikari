@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 	"unicode/utf8"
 
 	"github.com/gorilla/websocket"
@@ -68,7 +69,9 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		if request.Messagetype == "start" {
-			start(theuser, request.Password)
+			if !start(theuser, request.Password) {
+				break
+			}
 			continue
 		}
 		if !checkUser(theuser, request.Password) {
@@ -94,7 +97,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func start(theuser *user, password string) {
+func start(theuser *user, password string) bool {
 	type startdata struct {
 		Db    string
 		Users string
@@ -103,15 +106,16 @@ func start(theuser *user, password string) {
 		message := startdata{Db: getIndexData(), Users: "{}"}
 		b, _ := json.Marshal(message)
 		transmitMessage(nil, &wsdata{"server", "", "", []string{theuser.id}, "start", string(b)})
-		return
+		return true
 	}
 	if password != theuser.app.Password {
 		if password == "" {
 			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "passwordrequired"})
 		} else {
+			time.Sleep(3 * time.Second)
 			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "wrongpassword"})
 		}
-		return
+		return false
 	}
 	theuser.app.Lock()
 	defer theuser.app.Unlock()
@@ -119,6 +123,7 @@ func start(theuser *user, password string) {
 	b, _ := json.Marshal(message)
 	transmitMessage(theuser.app, &wsdata{"server", "in", "", []string{}, "sign", theuser.id})
 	transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", string(b)})
+	return true
 }
 
 func transmitMessage(app *appstruct, message *wsdata) {

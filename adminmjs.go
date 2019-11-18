@@ -46,7 +46,7 @@ export class Admin {
    <td class="dir" style="${disabled}">${key}</td>
    <td><button onclick="admin.renderUpdateform('${key}')">✎</button></td>
    <td><input id="Name${key}" type="text" value="${Pikari.data.get(key).Name}" onchange="admin.change('${key}', 'Name')"></td>
-   <td><input id="Password${key}" class="narrow" type="text" value="${Pikari.data.get(key).Password}" onchange="admin.change('${key}', 'Password')"></td>
+   <td><input id="Password${key}" class="narrow" type="text" value="${atob(Pikari.data.get(key).Password)}" onchange="admin.change('${key}', 'Password')"></td>
    <td><input id="Maxpagecount${key}" class="narrow" type="number" min="0" placeholder="default" value="${maxpc}" onchange="admin.change('${key}', 'Maxpagecount')"></td>
    <td><select id="Autorestart${key}" onchange="admin.change('${key}', 'Autorestart')">
        <option value="-1" ${sel_1}>default</option>
@@ -107,7 +107,8 @@ export class Admin {
     }
     if (prop=="Maxpagecount" && !e("Maxpagecount"+key).value) el.value = -1
     if (await Pikari.setLocks(key)) {
-      Pikari.data.get(key)[prop] = el.type == "number" || el.nodeName == "SELECT" ? parseInt(el.value) : el.value
+			if (prop == "Password") Pikari.data.get(key)["Password"] = btoa(el.value)
+      else Pikari.data.get(key)[prop] = el.type == "number" || el.nodeName == "SELECT" ? parseInt(el.value) : el.value
       Pikari.commit()
     }
     if (e("Maxpagecount"+key).value == -1) e("Maxpagecount"+key).value = ""

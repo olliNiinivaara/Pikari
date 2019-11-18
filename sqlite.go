@@ -15,7 +15,7 @@ func openDb(app *appstruct, dir string, maxPagecount int) {
 		return
 	}
 	var err error
-	var path = exedir + dir + s + "data.db"
+	var path = datadir + dir + ".db"
 	app.database, err = sql.Open("sqlite3", path)
 	if err != nil {
 		log.Fatal(err.Error() + ": " + path)
@@ -77,6 +77,9 @@ func closeDb(app *appstruct) {
 }
 
 func getData(app *appstruct) []byte {
+	if app.database == nil {
+		return []byte("{}")
+	}
 	if app.buffer.Len() > 0 {
 		return app.buffer.Bytes()
 	}

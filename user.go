@@ -77,7 +77,6 @@ func checkUser(u *user, pw string) bool {
 		return false
 	}
 	if u.app != nil && pw != u.app.Password {
-		log.Println("wrong password by user: " + u.id)
 		return false
 	}
 	return true
