@@ -23,6 +23,9 @@ var upgrader = websocket.Upgrader{}
 
 func ws(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "close")
+	if shuttingdown {
+		return
+	}
 	userid := r.URL.Query().Get("user")
 	app := r.URL.Query().Get("app")
 	if len(app) > 1 {
@@ -57,6 +60,11 @@ func ws(w http.ResponseWriter, r *http.Request) {
 
 	for {
 		_, msg, err := c.ReadMessage()
+		if shuttingdown {
+			c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			c.Close()
+			break
+		}
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 				log.Println("Pikari server error - web socket read failed:" + err.Error())

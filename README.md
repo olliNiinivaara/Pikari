@@ -9,11 +9,12 @@
 
 ## Quick start
 
-1. Select suitable binary distribution (to build from sources, see below):
-   - [Linux/x86-64](https://github.com/olliNiinivaara/Pikari/raw/master/dist/linux/pikari)
+1. Create directory for Pikari. Note that Pikari data directory will be created to the *parent* directory of this directory
+1. Get suitable binary distribution (*curl -LJO `<URL>`* works):
+   - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/raw/master/dist/linux/pikari>
 <!--   - [Windows/x86-64](https://github.com/olliNiinivaara/Pikari/raw/master/dist/windows/pikari.exe)
    - [Apple/x86-64](https://github.com/olliNiinivaara/Pikari/raw/master/dist/apple/pikari) -->
-1. Give the program execution permissions
+1. In Linux+MacOS, give program execution permissions: chmod u+x pikari
 1. Learn to use Pikari server with [Pikari tutorial](http://github.com/olliNiinivaara/Hellopikari)
 1. Learn to write Pikari applications with [API specification](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 1. Upload some more [examples](#examples) to Pikari and study them

@@ -120,12 +120,14 @@ func decrementUsercount(app *appstruct) {
 }
 
 func closeApp(dir string) {
-	if dir == "admin" {
-		log.Println("Bugger, someone tried to close admin")
-		return
-	}
 	removeAllUsers(apps[dir])
 	closeDb(apps[dir])
+}
+
+func closeApps() {
+	for dir := range apps {
+		removeAllUsers(apps[dir])
+	}
 }
 
 func getIndexData() string {

@@ -54,26 +54,34 @@ func openDb(app *appstruct, dir string, maxPagecount int) {
 }
 
 func closeDbs() {
+	success := true
 	for _, app := range apps {
-		closeDb(app)
+		success = success && closeDb(app)
 	}
-	fmt.Println("\nGood bye!")
+	if success {
+		fmt.Println("all data saved")
+	} else {
+		fmt.Println("DATA FAILS! See log for more info")
+	}
 }
 
-func closeDb(app *appstruct) {
+func closeDb(app *appstruct) bool {
 	if app.database == nil {
-		return
+		return true
 	}
-	app.get.Close()
-	app.set.Close()
-	if _, err := app.database.Exec("VACUUM;"); err != nil {
-		log.Println(err)
-	}
-	if _, err := app.database.Exec("PRAGMA optimize;"); err != nil {
-		log.Println(err)
-	}
-	app.database.Close()
+	var err error
+	err = app.get.Close()
+	err = app.set.Close()
+	err = app.del.Close()
+	_, err = app.database.Exec("VACUUM;")
+	_, err = app.database.Exec("PRAGMA optimize;")
+	err = app.database.Close()
 	app.database = nil
+	if err != nil {
+		log.Println(app.Name + ": " + err.Error())
+		return false
+	}
+	return true
 }
 
 func getData(app *appstruct) []byte {

@@ -12,7 +12,7 @@ const index1 = `<!DOCTYPE html>
   <h2>Pikari</h2>
   <ol id="applist"></ol>
 </body>  
-<script src="/pikari.js"></script>
+<script src="pikari.js"></script>
 <script>
   let username = new URLSearchParams(window.location.search).get('user')  
   if (!username) username = window.prompt("Enter your user name for Pikari")
