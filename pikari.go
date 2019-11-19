@@ -88,19 +88,23 @@ func main() {
 		fmt.Print("Commencing graceful shutdown...")
 		shuttingdown = true
 		time.Sleep(2 * time.Second)
-		closeApps()
+		removeAllUsers(nil)
 		fmt.Print("web sockets closed...")
 		if err := srv.Shutdown(ctx); err != nil {
 			log.Println(err)
 		}
 	}()
 	err := srv.ListenAndServe()
+	fmt.Print("http server closed...")
+	shuttingdown = true
 	time.Sleep(2 * time.Second)
+	removeAllUsers(nil)
 	closeDbs()
 	if err != http.ErrServerClosed {
 		fmt.Println(err)
 		log.Fatal(err)
 	}
+	fmt.Println("bye!")
 	os.Exit(0)
 }
 

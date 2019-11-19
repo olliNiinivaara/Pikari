@@ -33,10 +33,12 @@ func addUser(u *user) {
 
 func removeAllUsers(app *appstruct) {
 	for _, u := range users {
-		if u.app == app {
+		if app == nil || u.app == app {
 			u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			delete(users, u.id)
-			app.usercount = 0
+			if app != nil {
+				app.usercount = 0
+			}
 		}
 	}
 }

@@ -124,12 +124,6 @@ func closeApp(dir string) {
 	closeDb(apps[dir])
 }
 
-func closeApps() {
-	for dir := range apps {
-		removeAllUsers(apps[dir])
-	}
-}
-
 func getIndexData() string {
 	indexbuffer.Reset()
 	indexbuffer.WriteString("{")

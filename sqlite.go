@@ -59,9 +59,9 @@ func closeDbs() {
 		success = success && closeDb(app)
 	}
 	if success {
-		fmt.Println("all data saved")
+		fmt.Print("all databases closed...")
 	} else {
-		fmt.Println("DATA FAILS! See log for more info")
+		fmt.Print("DATABASE SHUTDOWN FAILED! See log for more info...")
 	}
 }
 
@@ -75,6 +75,10 @@ func closeDb(app *appstruct) bool {
 	err = app.del.Close()
 	_, err = app.database.Exec("VACUUM;")
 	_, err = app.database.Exec("PRAGMA optimize;")
+	if err != nil {
+		log.Println(app.Name + ": " + err.Error())
+	}
+	err = nil
 	err = app.database.Close()
 	app.database = nil
 	if err != nil {
