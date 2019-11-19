@@ -409,7 +409,15 @@ Pikari._handleUser = function (d) {
 
 Pikari._startWebSocket = function () {
   const protocol = location.protocol === "https:" ? "wss://" : "ws://"
-  Pikari._ws = new WebSocket(protocol + location.host + "/ws?user=" + Pikari.user + "&app=" + location.pathname)
+  let host = location.hostname
+  if (location.port) host += ":" + location.port
+  let path = location.pathname.substring(1, location.pathname.length)
+  if (path.endsWith("/")) path = path.substring(0, path.length-1)
+  const split = path.lastIndexOf('/')
+  const dir = location.pathname.substring(0, split+1)
+  const app = path.substring(split+1)
+  const url = protocol + host + dir + "/ws?user=" + Pikari.user + "&app=" + app
+  Pikari._ws = new WebSocket(url)
 
   Pikari._ws.onopen = function () {
     Pikari._sendToServer("start")

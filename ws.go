@@ -28,11 +28,6 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	userid := r.URL.Query().Get("user")
 	app := r.URL.Query().Get("app")
-	if len(app) > 1 {
-		app = app[1 : len(app)-1]
-	} else {
-		app = ""
-	}
 	if utf8.RuneCountInString(userid) > 200 {
 		userid = string([]rune(userid)[0:200])
 	}

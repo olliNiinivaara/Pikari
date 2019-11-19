@@ -9,7 +9,7 @@
 ## Quick start
 
 1. Create directory for Pikari. Note that Pikari data directory will be created to the *parent* directory of this directory
-1. Get suitable binary distribution of latest release(*curl -LJO `<URL>`* works):
+1. Get suitable binary distribution of latest release (*curl -LJO `<URL>`* works):
    - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-alpha/linux_pikari>
    - Windows/x86-64: not yet released
    - Apple/x86-64: not yet released
