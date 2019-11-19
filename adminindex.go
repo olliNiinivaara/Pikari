@@ -75,7 +75,7 @@ const adminindex = `<!DOCTYPE html>
 </head>
 
 <body id="body"></body>
-<script src="/pikari.js"></script>
+<script src="../pikari.js"></script>
 <script>
   const password = window.prompt("Enter admin password")
   if (!password) document.body.innerHTML = "FAIL!"

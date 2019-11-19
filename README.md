@@ -1,6 +1,6 @@
 # 🏆 Pikari
 - Rapidly build working prototypes - best way to elicitate UX and functional requirements
-- Backend-as-a-Service (BaaS) - concentrate on UI, all your apps and their data are served for you
+- Backend-as-a-Service (BaaS) - concentrate on front-end, data is automatically served for you
 - Simple Javascript API and lots of pragmatic examples - get productive in record time
 - Framework agnostic - use your favorite tools or stick to vanillaJs
 - Developer-friendly - manage, configure and update everything remotely via web admin GUI

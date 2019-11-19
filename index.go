@@ -23,12 +23,16 @@ const index1 = `<!DOCTYPE html>
       if (A < B) return -1 ; if (A > B) return 1 ; return 0
     }
     Pikari.addChangeListener(()=>{
-		document.getElementById("applist").innerHTML = Pikari.getFields().sort((a,b) => sort(a, b)).reduce((result, key) => result +`
+			let url = location.href
+      const end = url.indexOf("?")
+      if (end > -1) url = url.substring(0, end)	
+		  document.getElementById("applist").innerHTML = Pikari.getFields().sort((a,b) => sort(a, b)).reduce((result, key) => result +`
 
-const index2 = `<li><a href="${'/'+key+'/?user='+Pikari.user}">${Pikari.data.get(key)}</a></li>`
+const index2 = `<li><a href="${url+key+'/?user='+Pikari.user}">${Pikari.data.get(key)}</a></li>`
 
 const index3 = `, '')
-    })
+		})
+		Pikari._index = true // hack, do not remove
     Pikari.start(username)
   }
 </script>
