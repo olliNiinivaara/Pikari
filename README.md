@@ -1,6 +1,6 @@
 # 🏆 Pikari
 - Rapidly build working prototypes - best way to elicitate UX and functional requirements
-- Backend-as-a-Service (BaaS) - concentrate on front-end, data is automatically served for you
+- Backend-as-a-Service (BaaS) - concentrate on front-end, data is automatically saved and synced
 - Simple Javascript API and lots of pragmatic examples - get productive in record time
 - Framework agnostic - use your favorite tools or stick to vanillaJs
 - Developer-friendly - manage, configure and update everything remotely via web admin GUI
@@ -8,12 +8,12 @@
 
 ## Quick start
 
-1. Create directory for Pikari. Note that Pikari data directory will be created to the *parent* directory of this directory
-1. Get suitable binary distribution of latest release (*curl -LJO `<URL>`* works):
-   - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-alpha/linux_pikari>
+1. Create a directory for Pikari. Note that Pikari data directory will be created to the *parent* directory of this directory. You can create directory Pikari and under it a subdirectory Pikari-v09-beta where to put the executable.
+1. Get latest release (*curl -J -LO `<URL>`* is our friend):
+   - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/linux-pikari-v09-beta>
    - Windows/x86-64: not yet released
    - Apple/x86-64: not yet released
-1. Rename to pikari, and in Linux+MacOS, give program execution permissions: chmod u+x pikari
+1. You might want to rename the program to pikari, and may need to *chmod u+x*
 1. Learn to use Pikari server with [Pikari tutorial](http://github.com/olliNiinivaara/Hellopikari)
 1. Learn to write Pikari applications with [API specification](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 1. Upload some more [examples](#examples) to Pikari and study them
@@ -33,3 +33,7 @@
 2. You need [git](https://www.git-scm.com/)
 3. You need [gcc](https://gcc.gnu.org/)
 4. ```go get github.com/olliNiinivaara/Pikari```
+
+## Contribute
+
+Feature & pull requests welcome, this is an open source community effort
