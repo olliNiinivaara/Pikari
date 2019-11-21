@@ -231,14 +231,16 @@ Pikari.getFields = function () {
 */
 Pikari.waiting = function (waiting) {
   if (waiting) {
-    document.body.className += (" waiting")
+		document.body.className += (" waiting")
+		Pikari._activeElement = document.activeElement
     document.querySelectorAll("body *").forEach(el => { el.disabled = true })
   }
   else {
     const n = document.body.className
     if (n.endsWith(" waiting")) document.body.className = n.substr(0, n.length - 8)
     else document.body.className = n.replace(" waiting ", " ")
-    document.querySelectorAll("body *").forEach(el => { el.disabled = false })
+		document.querySelectorAll("body *").forEach(el => { el.disabled = false })
+		if (Pikari._activeElement) Pikari._activeElement.focus()
   }
 }
 
@@ -256,9 +258,10 @@ Pikari.setLocks = async function (...locks) {
   if (!locks || locks.length == 0) locks = Pikari.getFields()
   locks = locks.flat()
   Pikari.locks = "inflight"
-  Pikari.waiting(true)
+	Pikari.waiting(true)
+	let response
   try {
-    let response = await fetch(Pikari._basepath+"setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "pw": Pikari._password, "locks": locks }) })
+    response = await fetch(Pikari._basepath+"setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "pw": Pikari._password, "locks": locks }) })
     if (Pikari.locks === "inflight") {
       Pikari.locks = await response.json()
       if (Pikari.locks["error"]) {
@@ -273,7 +276,14 @@ Pikari.setLocks = async function (...locks) {
     Pikari._oldData = new Map()
     Pikari.data.forEach((value, field) => { Pikari._oldData.set(field, JSON.stringify(value)) })
     return true
-  }
+	}
+	catch(e) {
+    if (response) {
+			let w = window.open()
+			w.document.write(response.text())
+		}
+		else alert(e.toString())
+	} 
   finally {
     Pikari.waiting(false)
   }
@@ -354,6 +364,8 @@ Pikari._userlisteners = []
 Pikari._app
 Pikari._basepath
 
+Pikari._activeElement
+
 Pikari._reportError = function (error) {
   error = "Pikari client error - " + error
   console.log(error)
@@ -411,7 +423,7 @@ Pikari._handleUser = function (d) {
 }
 
 Pikari._getUrl = function () {
-  if (Pikari._index) {
+  if (Pikari._app == "index") {
     let url = location.href
     url = url.replace("https://", "wss://")
     url = url.replace("http://", "ws://")

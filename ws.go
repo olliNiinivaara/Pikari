@@ -87,7 +87,7 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println(&request.Message)
 		case "message":
 			theuser.app.Lock()
-			response := wsdata{Sender: request.Sender, Messagetype: "messge", Message: request.Message}
+			response := wsdata{Sender: request.Sender, Messagetype: "message", Message: request.Message}
 			transmitMessage(theuser.app, &response)
 			theuser.app.Unlock()
 		case "commit":
