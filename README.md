@@ -25,7 +25,7 @@
 * [Text-Pikari](http://github.com/olliNiinivaara/Text-Pikari/): Synced editing of private and shared data
 * [List-Pikari](http://github.com/olliNiinivaara/List-Pikari/): Master-detail tables of data, CRUD and calculated fields
 * [TodoMVC-Pikari](http://github.com/olliNiinivaara/TodoMVC-Pikari/): The classic
-* [Chat-Pikari](http://github.com/olliNiinivaara/Chat-Pikari/): Messaging between users without a database - live demo available
+* [Chat-Pikari](http://github.com/olliNiinivaara/Chat-Pikari/): Messaging between users without a database
 
 ## Building from source
 

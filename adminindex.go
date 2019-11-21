@@ -81,7 +81,7 @@ const adminindex = `<!DOCTYPE html>
   if (!password) document.body.innerHTML = "FAIL!"
   else {
     (async function () {
-      let AdminModule = await import('/admin/admin.mjs')
+      let AdminModule = await import('./admin.mjs')
       window.admin = new AdminModule.Admin()
       Pikari.start(null, password)
     }())

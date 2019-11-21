@@ -258,7 +258,7 @@ Pikari.setLocks = async function (...locks) {
   Pikari.locks = "inflight"
   Pikari.waiting(true)
   try {
-    let response = await fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari._password, "locks": locks }) })
+    let response = await fetch(Pikari._basepath+"setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "pw": Pikari._password, "locks": locks }) })
     if (Pikari.locks === "inflight") {
       Pikari.locks = await response.json()
       if (Pikari.locks["error"]) {
@@ -310,7 +310,7 @@ Pikari.rollback = function () {
     Pikari._oldData.set(field, JSON.parse(oldvalue))
   })
   Pikari.data = Pikari._oldData
-  fetch("/setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "w": Pikari._password, "locks": [] }) })
+  fetch(Pikari._basepath+"setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "pw": Pikari._password, "locks": [] }) })
   for (let l of Pikari._changelisteners) l(Pikari.EVENT.ROLLBACK, changedfields, Pikari.user)
 }
 
@@ -322,7 +322,7 @@ Pikari.rollback = function () {
 Pikari.sendMessage = function (message, receivers) {
   if (!receivers) receivers = []
   if (!Array.isArray(receivers)) receivers = [receivers]
-  Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "app": location.pathname, "receivers": receivers, "messagetype": "message", "message": message }))
+  Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "pw": Pikari._password, "receivers": receivers, "messagetype": "message", "message": message }))
 }
 
 /**
@@ -351,6 +351,9 @@ Pikari._changelisteners = []
 Pikari._messagelisteners = []
 Pikari._userlisteners = []
 
+Pikari._app
+Pikari._basepath
+
 Pikari._reportError = function (error) {
   error = "Pikari client error - " + error
   console.log(error)
@@ -361,7 +364,7 @@ Pikari._reportError = function (error) {
 
 Pikari._sendToServer = function (messagetype, message) {
   if (!Pikari._ws) alert("No connection server!")
-  else Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "w": Pikari._password, "app": location.pathname, "messagetype": messagetype, "message": message }))
+  else Pikari._ws.send(JSON.stringify({ "sender": Pikari.user, "pw": Pikari._password, "messagetype": messagetype, "message": message }))
 }
 
 Pikari._handleStart = function (d) {
@@ -402,9 +405,9 @@ Pikari._handleLocking = function (d) {
 
 Pikari._handleUser = function (d) {
   if (d.message === Pikari.user) return
-  if (d.w === "in") Pikari.users.set(d.message, new Date())
+  if (d.pw === "in") Pikari.users.set(d.message, new Date())
   else Pikari.users.delete(d.message)
-  for (let l of Pikari._userlisteners) l(d.message, d.w === "in")
+  for (let l of Pikari._userlisteners) l(d.message, d.pw === "in")
 }
 
 Pikari._getUrl = function () {
@@ -419,15 +422,15 @@ Pikari._getUrl = function () {
   const protocol = location.protocol === "https:" ? "wss://" : "ws://"  
   let host = location.hostname
   if (location.port) host += ":" + location.port
-  let app = location.pathname.substring(1, location.pathname.length)
-  if (app.endsWith("/")) app = app.substring(0, app.length-1)
-  const split = app.lastIndexOf('/')
-  let path = ""
+  Pikari._app = location.pathname.substring(1, location.pathname.length)
+  if (Pikari._app.endsWith("/")) Pikari._app = Pikari._app.substring(0, Pikari._app.length-1)
+  const split = Pikari._app.lastIndexOf('/')
+  Pikari._basepath = "/"
   if (split > -1) {
-    app = app.substring(split+1)
-    path = location.pathname.substring(0, split)
+    Pikari._app = Pikari._app.substring(split+1)
+    Pikari._basepath = location.pathname.substring(0, split+1) + "/"
   }
-  return protocol + host + path + "/ws?user=" + Pikari.user + "&app=" + app
+  return protocol + host + Pikari._basepath + "ws?user=" + Pikari.user + "&app=" + Pikari._app
 }
 
 Pikari._startWebSocket = function () {

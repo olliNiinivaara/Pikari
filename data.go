@@ -10,7 +10,7 @@ import (
 
 type lockrequest struct {
 	User     string   `json:"user"`
-	Password string   `json:"w"`
+	Password string   `json:"pw"`
 	Locks    []string `json:"locks"`
 }
 

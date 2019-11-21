@@ -56,7 +56,7 @@ func removeUser(u *user, lock bool) {
 	u.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if u.app != nil {
 		removeLocks(u, true)
-		transmitMessage(u.app, &wsdata{"server", "", "", []string{}, "sign", u.id})
+		transmitMessage(u.app, &wsdata{"server", "", []string{}, "sign", u.id})
 		decrementUsercount(u.app)
 		u.app = nil
 	}

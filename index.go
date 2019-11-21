@@ -32,7 +32,7 @@ const index2 = `<li><a href="${url+key+'/?user='+Pikari.user}">${Pikari.data.get
 
 const index3 = `, '')
 		})
-		Pikari._index = true // hack, do not remove
+		Pikari._app = "index" // hack, do not remove
     Pikari.start(username)
   }
 </script>

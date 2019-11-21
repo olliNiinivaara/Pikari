@@ -12,8 +12,7 @@ import (
 
 type wsdata struct {
 	Sender      string   `json:"sender"`
-	Password    string   `json:"w,omitempty"`
-	App         string   `json:"app,omitempty"`
+	Password    string   `json:"pw,omitempty"`
 	Receivers   []string `json:"receivers,omitempty"`
 	Messagetype string   `json:"messagetype"`
 	Message     string   `json:"message"`
@@ -88,7 +87,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 			log.Println(&request.Message)
 		case "message":
 			theuser.app.Lock()
-			transmitMessage(theuser.app, &request)
+			response := wsdata{Sender: request.Sender, Messagetype: "messge", Message: request.Message}
+			transmitMessage(theuser.app, &response)
 			theuser.app.Unlock()
 		case "commit":
 			commit(theuser, &request.Message)
@@ -108,15 +108,15 @@ func start(theuser *user, password string) bool {
 	if theuser.app == nil {
 		message := startdata{Db: getIndexData(), Users: "{}"}
 		b, _ := json.Marshal(message)
-		transmitMessage(nil, &wsdata{"server", "", "", []string{theuser.id}, "start", string(b)})
+		transmitMessage(nil, &wsdata{"server", "", []string{theuser.id}, "start", string(b)})
 		return true
 	}
 	if password != theuser.app.Password {
 		if password == "" {
-			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "passwordrequired"})
+			transmitMessage(theuser.app, &wsdata{"server", "", []string{theuser.id}, "start", "passwordrequired"})
 		} else {
 			time.Sleep(3 * time.Second)
-			transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", "wrongpassword"})
+			transmitMessage(theuser.app, &wsdata{"server", "", []string{theuser.id}, "start", "wrongpassword"})
 		}
 		return false
 	}
@@ -124,8 +124,8 @@ func start(theuser *user, password string) bool {
 	defer theuser.app.Unlock()
 	message := startdata{Db: string(getData(theuser.app)), Users: getUsers(theuser.app)}
 	b, _ := json.Marshal(message)
-	transmitMessage(theuser.app, &wsdata{"server", "in", "", []string{}, "sign", theuser.id})
-	transmitMessage(theuser.app, &wsdata{"server", "", "", []string{theuser.id}, "start", string(b)})
+	transmitMessage(theuser.app, &wsdata{"server", "in", []string{}, "sign", theuser.id})
+	transmitMessage(theuser.app, &wsdata{"server", "", []string{theuser.id}, "start", string(b)})
 	return true
 }
 

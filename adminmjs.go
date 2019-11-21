@@ -56,7 +56,7 @@ export class Admin {
    <td>${Pikari.data.get(key).Source}</td>
  </tr>¤
      return result}, ¤¤)
-    
+		
     const html3 = /*html*/
 ¤</tbody>
  </table>
@@ -91,7 +91,7 @@ export class Admin {
       ¤     </tr>
    </thead>
  </table>
- <a href="/?user=${Pikari.user}">Back to index</a>
+ <a href=${location.href.replace("/admin/", "/")}>Back to index</a>
  ¤
    e("body").innerHTML = html1+html2+html3+html4+html5+html6+html7
   }
@@ -142,10 +142,15 @@ export class Admin {
   async submitDirform() {
     if (!n("dir").value) return alert("Directory missing")
     if (n("files").files.length == 0) return alert("Files missing")
-    Pikari.waiting(true)
+		Pikari.waiting(true)
+		let payload = new FormData()
+		payload.append("pw", Pikari._password)
+		payload.append("dir", n("dir").value)
+		payload.append("source", n("source").value)
+		for (const f of n("files").files) {payload.append("files", f)}
     const response = await fetch("dirupload", {
       method: 'POST',
-      body: new FormData(e("dirform"))
+      body: payload
     })
     const text = await response.text()
     Pikari.waiting(false)
@@ -165,10 +170,14 @@ export class Admin {
   async submitGitform() {
     if (!n("dir").value) return alert("Directory missing")
     if (!n("url").value) return alert("Url missing")
-    Pikari.waiting(true)
+		Pikari.waiting(true)
+		let payload = new FormData()
+		payload.append("pw", Pikari._password)		
+    payload.append("dir", n("dir").value)
+    payload.append("url", n("url").value)
     const response = await fetch("gitupload", {
       method: 'POST',
-      body: new FormData(e("gitform"))
+      body: payload
     })
     const text = await response.text()
     Pikari.waiting(false)
@@ -177,20 +186,19 @@ export class Admin {
 
   renderUpdateform(dir) {
     const checked = Pikari.data.get(dir).Disabled == 1 ? "checked" : ""
-    const fileinput = !Pikari.data.get(dir).Git ? '<input name="files" type="file" webkitdirectory mozdirectory directory multiple/>' : ""
+    const fileinput = !Pikari.data.get(dir).Git ? '<input id="upfiles" type="file" webkitdirectory mozdirectory directory multiple/>' : ""
     const sourcehint = fileinput ? "Source (optional reminder)" : "URL of the remote Fit repository"
-    const updategit = fileinput ? "" : '<label>Update<input name="dogit" class="check" type="checkbox" value="checked" checked></label>'
+    const updategit = fileinput ? "" : '<label>Update<input id="dogit" class="check" type="checkbox" value="checked" checked></label>'
     e("body").innerHTML = /*html*/
       ¤<h2>Update ${Pikari.data.get(dir).Name}</h2>
   <form id="updateform" style="display: flex; flex-direction: column; align-items: center">
-    <input name="dir" type="hidden" value="${dir}"/>
     ${fileinput}
-    <input name="source" placeholder="${sourcehint}" maxlength="1000" value="${Pikari.data.get(dir).Source}">
+    <input id="upsource" placeholder="${sourcehint}" maxlength="1000" value="${Pikari.data.get(dir).Source}">
     <div style="display: grid">
       ${updategit}
-      <label>Disabled<input name="disabled" class="check" type="checkbox" value="checked" ${checked}></label>
-      <label>Delete existing data</span><input name="deletedata" class="check" value="checked" type="checkbox"></label>
-      <label>Delete application</span><input name="deleteapp" class="check" value="checked" type="checkbox"></label>
+      <label>Disabled<input id="disabled" class="check" type="checkbox" value="checked" ${checked}></label>
+      <label>Delete existing data</span><input id="deletedata" class="check" value="checked" type="checkbox"></label>
+      <label>Delete application</span><input id="deleteapp" class="check" value="checked" type="checkbox"></label>
     </div>
     <div><button type="button" onclick="admin.submitUpdateform('${dir}')">Proceed</button><button type="button" onclick="admin.render()">Cancel</button></div>
   </form>¤
@@ -198,15 +206,26 @@ export class Admin {
 
   async submitUpdateform(dir) {
     let response
-    if (n("deleteapp").checked) {
+    if (e("deleteapp").checked) {
       if (!confirm("Really delete " + Pikari.data.get(dir).Name+ "?")) return
       Pikari.waiting(true)
-      response = await fetch("delete?app="+dir)
+      response = await fetch("delete", {
+        method: 'POST',
+        body: JSON.stringify({"Pw": Pikari._password, "App": Pikari._app })
+      })
     } else {
       Pikari.waiting(true)
+			let payload = new FormData()
+			payload.append("pw", Pikari._password)		
+		  payload.append("dir", dir)
+      payload.append("source", e("upsource").value)
+      if (Pikari.data.get(dir).Git) payload.append("dogit", e("dogit").value)
+      else for (const f of e("upfiles").files) {payload.append("files", f)}
+      payload.append("disabled", e("disabled").value)
+      payload.append("deletedata", e("deletedata").value)      
       response = await fetch("update", {
         method: 'POST',
-        body: new FormData(e("updateform"))
+        body: payload
       })
     }
     const text = await response.text()

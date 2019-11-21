@@ -71,7 +71,7 @@ func main() {
 	http.HandleFunc("/admin/dirupload", dirUploadHandler)
 	http.HandleFunc("/admin/gitupload", gitUploadHandler)
 	http.HandleFunc("/admin/update", updateHandler)
-	http.HandleFunc("/admin/delete/", deleteHandler)
+	http.HandleFunc("/admin/delete", deleteHandler)
 	rootfs := http.FileServer(http.Dir(exedir))
 	http.Handle("/", rootfs)
 	fmt.Println("Serving to " + addr)

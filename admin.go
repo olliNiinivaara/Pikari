@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -24,7 +25,16 @@ func dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 	defer globalmutex.Unlock()
 	formdata := r.MultipartForm
 	defer formdata.RemoveAll()
-	dir := formdata.Value["dir"][0]
+	pw, ok := formdata.Value["pw"]
+	if !ok || len(pw) == 0 || pw[0] != apps["admin"].Password {
+		return
+	}
+	dirvalue, ok := formdata.Value["dir"]
+	if !ok || len(dirvalue) == 0 {
+		fmt.Fprintln(w, "Directory value not given")
+		return
+	}
+	dir := dirvalue[0]
 	if dir == "" {
 		fmt.Fprintln(w, "Directory value not given")
 		return
@@ -32,19 +42,29 @@ func dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if dir[0] == filepath.Separator {
 		dir = dir[1 : len(dir)-1]
 	}
-	if _, err := os.Stat(exedir + dir); !os.IsNotExist(err) {
+	_, err = os.Stat(exedir + dir)
+	if err == nil || !os.IsNotExist(err) {
 		fmt.Fprintln(w, "An application already exists at directory "+exedir+dir)
 		return
 	}
 	if !copyFiles(dir, formdata.File["files"], w) {
 		return
 	}
-	apps[dir] = &appstruct{Name: dir, Maxpagecount: -1, Autorestart: -1, Source: formdata.Value["source"][0], Git: "", exists: true}
+	source := ""
+	sourcevalue, ok := formdata.Value["source"]
+	if ok {
+		source = sourcevalue[0]
+	}
+	apps[dir] = &appstruct{Name: dir, Maxpagecount: -1, Autorestart: -1, Source: source, Git: "", exists: true}
 	b, _ := json.Marshal(apps[dir])
 	updateAdmindata(dir, string(b))
 }
 
 func gitUploadHandler(w http.ResponseWriter, r *http.Request) {
+	pw := r.FormValue("pw")
+	if pw != apps["admin"].Password {
+		return
+	}
 	dir := r.FormValue("dir")
 	if dir == "" {
 		fmt.Fprintln(w, "Directory value not given")
@@ -81,6 +101,10 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	formdata := r.MultipartForm
 	defer formdata.RemoveAll()
+	pw, ok := formdata.Value["pw"]
+	if !ok || len(pw) == 0 || pw[0] != apps["admin"].Password {
+		return
+	}
 	dir := formdata.Value["dir"][0]
 	if dir == "" || apps[dir] == nil {
 		fmt.Fprintln(w, "App does not exist: "+dir)
@@ -133,20 +157,36 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteHandler(w http.ResponseWriter, r *http.Request) {
-	app := r.URL.Query().Get("app")
-	globalmutex.Lock()
-	defer globalmutex.Unlock()
-	if app == "" || apps[app] == nil {
+	type deletedata struct {
+		Pw  string
+		App string
+	}
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+	request := deletedata{}
+	if err = json.Unmarshal(b, &request); err != nil {
+		log.Println("Pikari server error - delete parsing error: " + err.Error())
+		fmt.Fprintln(w, "Invalid request")
 		return
 	}
-	mutex := &apps[app].Mutex
+	if request.Pw != apps["admin"].Password {
+		return
+	}
+	globalmutex.Lock()
+	defer globalmutex.Unlock()
+	if request.App == "" || request.App == "admin" || apps[request.App] == nil {
+		return
+	}
+	mutex := &apps[request.App].Mutex
 	mutex.Lock()
 	defer mutex.Unlock()
-	closeApp(app)
-	updateAdmindata(app, "null")
-	apps[app] = nil
-	os.RemoveAll(exedir + app)
-	os.Remove(datadir + app)
+	closeApp(request.App)
+	updateAdmindata(request.App, "null")
+	apps[request.App] = nil
+	os.RemoveAll(exedir + request.App)
+	os.Remove(datadir + request.App)
 }
 
 func updateAdmindata(dir, value string) {
@@ -174,9 +214,9 @@ func updateApp(dir, value string) {
 	if dir != "admin" {
 		closeApp(dir)
 	} else {
-		for _, app := range apps {
-			if app.Maxpagecount == -1 {
-				closeApp(dir)
+		for appdir, app := range apps {
+			if appdir != "admin" && app.Maxpagecount == -1 {
+				closeApp(appdir)
 			}
 		}
 	}
