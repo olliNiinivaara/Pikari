@@ -8,12 +8,13 @@
 
 ## Quick start
 
-1. Create a directory for Pikari. Note that Pikari data directory will be created to the *parent* directory of this directory. You can create directory Pikari and under it a subdirectory Pikari-v09-beta where to put the executable.
-1. Get latest release (*curl -J -LO `<URL>`* is our friend):
+1. Create a 2-level deep directory hierarchy for Pikari: Because Pikari *data* directory will be automatically created to the *parent* directory of the executable's directory, put the executable to a subdirectory.
+1. Put latest release to the subdirectory (*curl -J -LO `<URL>`* is our friend):
    - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/linux-pikari-v09-beta>
    - Windows/x86-64: not yet released
-   - Apple/x86-64: not yet released
-1. You might want to rename the program to pikari, and may need to *chmod u+x*
+   - MacOS/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/macos-pikari-v09-beta>
+1. For convenience rename the program to pikari (.exe in Windows but [remove .dms by Safari](https://forums.macrumors.com/threads/safari-erroneously-adding-dms-extension-to-downloads.2080108/))
+1. In Linux and MacOS, give executable permissions with *chmod u+x* pikari
 1. Learn to use Pikari server with [Pikari tutorial](http://github.com/olliNiinivaara/Hellopikari)
 1. Learn to write Pikari applications with [API specification](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 1. Upload some more [examples](#examples) to Pikari and study them
