@@ -22,7 +22,7 @@ import (
 
 const s = string(filepath.Separator)
 
-var exedir, datadir, port = "", "", 8080
+var exedir, publicdir, datadir, port = "", "", "", 8080
 
 var shuttingdown = false
 
@@ -41,6 +41,8 @@ func main() {
 	icon, _ = base64.StdEncoding.DecodeString(icon64)
 	exedir, _ = os.Getwd()
 	exedir += s
+	publicdir = exedir + "public" + s
+	datadir = exedir + "data" + s
 	var pw string
 	var port int
 	flag.StringVar(&pw, "password", "", "password for administering")
@@ -72,8 +74,7 @@ func main() {
 	http.HandleFunc("/admin/gitupload", gitUploadHandler)
 	http.HandleFunc("/admin/update", updateHandler)
 	http.HandleFunc("/admin/delete", deleteHandler)
-	rootfs := http.FileServer(http.Dir(exedir))
-	http.Handle("/", rootfs)
+	http.Handle("/", http.FileServer(http.Dir(publicdir)))
 	fmt.Println("Serving to " + addr)
 	fmt.Println("Send SIGINT (Ctrl+C) to quit")
 
@@ -109,20 +110,26 @@ func main() {
 }
 
 func createFiles() {
-	wd, _ := os.Getwd()
-	parent := filepath.Dir(wd)
-	datadir = parent + s + filepath.Base(exedir) + "data" + s
+	if _, err := os.Stat(publicdir); err != nil {
+		if err := os.Mkdir(publicdir, 0700); err != nil {
+			fmt.Println("Could not create public directory " + publicdir)
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println("Public directory created to " + publicdir)
+	}
+
 	if _, err := os.Stat(datadir); err != nil {
 		if err := os.Mkdir(datadir, 0700); err != nil {
 			fmt.Println("Could not create data directory " + datadir)
 			fmt.Println(err)
 			os.Exit(1)
 		}
-		fmt.Println("Pikari data directory created to " + datadir)
+		fmt.Println("Data directory created to " + datadir)
 	}
 
-	if _, err := os.Stat(exedir + "pikari.js"); err != nil {
-		file, err := os.Create(exedir + "pikari.js")
+	if _, err := os.Stat(publicdir + "pikari.js"); err != nil {
+		file, err := os.Create(publicdir + "pikari.js")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -130,8 +137,8 @@ func createFiles() {
 		file.WriteString(pikari)
 		file.Close()
 	}
-	if _, err := os.Stat(exedir + "index.html"); err != nil {
-		file, err := os.Create(exedir + "index.html")
+	if _, err := os.Stat(publicdir + "index.html"); err != nil {
+		file, err := os.Create(publicdir + "index.html")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -139,9 +146,19 @@ func createFiles() {
 		file.WriteString(index1 + "`" + index2 + "`" + index3)
 		file.Close()
 	}
-	if _, err := os.Stat(exedir + "admin" + s + "admin.mjs"); err != nil {
-		os.Mkdir(exedir+"admin", 0700)
-		file, err := os.Create(exedir + "admin" + s + "admin.mjs")
+
+	admindir := publicdir + "admin" + s
+	if _, err := os.Stat(admindir); err != nil {
+		if err := os.Mkdir(admindir, 0700); err != nil {
+			fmt.Println("Could not create admin directory " + admindir)
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println("Admin app created to " + admindir)
+	}
+
+	if _, err := os.Stat(admindir + "admin.mjs"); err != nil {
+		file, err := os.Create(admindir + "admin.mjs")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -149,8 +166,8 @@ func createFiles() {
 		file.WriteString(strings.Replace(adminmjs, "¤", "`", -1))
 		file.Close()
 	}
-	if _, err := os.Stat(exedir + "admin" + s + "index.html"); err != nil {
-		file, err := os.Create(exedir + "admin" + s + "index.html")
+	if _, err := os.Stat(admindir + "index.html"); err != nil {
+		file, err := os.Create(admindir + "index.html")
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

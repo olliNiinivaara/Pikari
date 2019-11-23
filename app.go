@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
-	"os"
 	"sync"
 	"time"
 
@@ -39,7 +38,6 @@ var globalmutex sync.Mutex
 
 func initApps(adminpassword string) {
 	var a = new(appstruct)
-	os.Mkdir(exedir+"admin", 0700)
 	openDb(a, "admin", 10000)
 	if err := json.Unmarshal(getData(a), &apps); err != nil {
 		log.Fatal(err)
@@ -52,7 +50,7 @@ func initApps(adminpassword string) {
 	theadmin.locks = make(map[string]lock)
 	theadmin.Password = adminpassword
 
-	files, err := ioutil.ReadDir(exedir)
+	files, err := ioutil.ReadDir(publicdir)
 	if err != nil {
 		log.Fatal(err)
 	}

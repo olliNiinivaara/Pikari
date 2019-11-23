@@ -263,6 +263,12 @@ Pikari.setLocks = async function (...locks) {
   try {
     response = await fetch(Pikari._basepath+"setlocks", { method: "post", body: JSON.stringify({ "user": Pikari.user, "pw": Pikari._password, "locks": locks }) })
     if (Pikari.locks === "inflight") {
+			if (response.status != 200) {
+				Pikari.locks = new Map()
+        let w = window.open()
+				w.document.write(response.text())
+				return false
+			}
       Pikari.locks = await response.json()
       if (Pikari.locks["error"]) {
         Pikari._reportError(Pikari.locks["error"])
@@ -278,11 +284,7 @@ Pikari.setLocks = async function (...locks) {
     return true
 	}
 	catch(e) {
-    if (response) {
-			let w = window.open()
-			w.document.write(response.text())
-		}
-		else alert(e.toString())
+    alert(e.toString())
 	} 
   finally {
     Pikari.waiting(false)

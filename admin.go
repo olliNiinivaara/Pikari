@@ -42,9 +42,9 @@ func dirUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if dir[0] == filepath.Separator {
 		dir = dir[1 : len(dir)-1]
 	}
-	_, err = os.Stat(exedir + dir)
+	_, err = os.Stat(publicdir + dir)
 	if err == nil || !os.IsNotExist(err) {
-		fmt.Fprintln(w, "An application already exists at directory "+exedir+dir)
+		fmt.Fprintln(w, "An application already exists at directory "+publicdir+dir)
 		return
 	}
 	if !copyFiles(dir, formdata.File["files"], w) {
@@ -73,8 +73,8 @@ func gitUploadHandler(w http.ResponseWriter, r *http.Request) {
 	if dir[0] == filepath.Separator {
 		dir = dir[1 : len(dir)-1]
 	}
-	if _, err := os.Stat(exedir + dir); !os.IsNotExist(err) {
-		fmt.Fprintln(w, "An application already exists at directory "+exedir+dir)
+	if _, err := os.Stat(publicdir + dir); !os.IsNotExist(err) {
+		fmt.Fprintln(w, "An application already exists at directory "+publicdir+dir)
 		return
 	}
 	u := r.FormValue("url")
@@ -148,7 +148,7 @@ func updateHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	os.RemoveAll(exedir + dir)
+	os.RemoveAll(publicdir + dir)
 	if files != nil {
 		copyFiles(dir, files, w)
 	} else {
@@ -185,7 +185,7 @@ func deleteHandler(w http.ResponseWriter, r *http.Request) {
 	closeApp(request.App)
 	updateAdmindata(request.App, "null")
 	apps[request.App] = nil
-	os.RemoveAll(exedir + request.App)
+	os.RemoveAll(publicdir + request.App)
 	os.Remove(datadir + request.App)
 }
 
@@ -226,7 +226,7 @@ func copyFiles(dir string, files []*multipart.FileHeader, w http.ResponseWriter)
 	if len(files) == 0 {
 		return true
 	}
-	os.Mkdir(exedir+dir, 0700)
+	os.Mkdir(publicdir+dir, 0700)
 	for i := range files {
 		file, err := files[i].Open()
 		defer file.Close()
@@ -239,8 +239,8 @@ func copyFiles(dir string, files []*multipart.FileHeader, w http.ResponseWriter)
 		if index != -1 {
 			name = name[index:]
 		}
-		os.MkdirAll(exedir+dir+filepath.Dir(name), 0700)
-		out, err := os.Create(exedir + dir + name)
+		os.MkdirAll(publicdir+dir+filepath.Dir(name), 0700)
+		out, err := os.Create(publicdir + dir + name)
 		defer out.Close()
 		if err != nil {
 			fmt.Fprintf(w, "Unable to create file for writing: "+files[i].Filename)
@@ -256,15 +256,15 @@ func copyFiles(dir string, files []*multipart.FileHeader, w http.ResponseWriter)
 }
 
 func cloneRepo(dir string, url *url.URL, w http.ResponseWriter) bool {
-	os.Mkdir(exedir+dir, 0700)
+	os.Mkdir(publicdir+dir, 0700)
 	cmd := exec.Command("git", "clone", "--depth", "1", url.String(), ".")
-	cmd.Dir = exedir + dir
+	cmd.Dir = publicdir + dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		os.RemoveAll(exedir + dir)
+		os.RemoveAll(publicdir + dir)
 		fmt.Fprintln(w, string(out)+" "+err.Error())
 		return false
 	}
-	os.RemoveAll(exedir + dir + s + ".git")
+	os.RemoveAll(publicdir + dir + s + ".git")
 	return true
 }
