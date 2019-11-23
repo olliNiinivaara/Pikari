@@ -16,8 +16,8 @@
 1. For convenience, rename the program to pikari (.exe in Windows but [remove .dms added by Safari](https://forums.macrumors.com/threads/safari-erroneously-adding-dms-extension-to-downloads.2080108/))
 1. In Linux and MacOS, give executable permissions with *chmod u+x* pikari
 1. Learn to use Pikari server with [Pikari tutorial](http://github.com/olliNiinivaara/Hellopikari)
-1. Learn to write Pikari applications with [API specification](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 1. Upload some more [examples](#examples) to Pikari and study them
+1. Learn to write Pikari applications with [API specification](http://htmlpreview.github.io/?https://github.com/olliNiinivaara/Pikari/blob/master/doc/pikari_API.html)
 1. Start writing your own prototypes!
 
 ## <a name="examples"></a>Examples
