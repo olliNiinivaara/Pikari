@@ -11,7 +11,7 @@
 1. Create new directory for Pikari
 1. Put latest release there (*curl -J -LO `<URL>`* is our friend):
    - Linux/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/linux-pikari-v09-beta>
-   - Windows/x86-64: not yet released
+   - Windows/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/pikari-v09-beta.exe>
    - MacOS/x86-64: <https://github.com/olliNiinivaara/Pikari/releases/download/v0.9-beta/macos-pikari-v09-beta>
 1. For convenience, rename the program to pikari (.exe in Windows but [remove .dms added by Safari](https://forums.macrumors.com/threads/safari-erroneously-adding-dms-extension-to-downloads.2080108/))
 1. In Linux and MacOS, give executable permissions with *chmod u+x* pikari
